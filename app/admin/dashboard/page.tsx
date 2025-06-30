@@ -22,12 +22,24 @@ interface User {
   intro: string;
 }
 
+interface Comment {
+  id: number;
+  post_id: number;
+  content: string;
+}
+
 export default function AdminDashboard() {
   const [userId, setUserId] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState("");
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState(0); // Track active tab
+  const [activeTab, setActiveTab] = useState(0);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -79,6 +91,64 @@ export default function AdminDashboard() {
 
     if (userId) fetchUser();
   }, [userId]);
+
+  const fetchComments = async (postId: number) => {
+    setIsLoadingComments(true);
+    try {
+      const res = await fetch(`/api/admin/posts/comments?postId=${postId}`);
+      if (!res.ok) throw new Error("Failed to fetch comments");
+      const data = await res.json();
+      setComments(data.comments);
+    } catch (err: any) {
+      console.error("Error fetching comments:", err);
+      setComments([]);
+    } finally {
+      setIsLoadingComments(false);
+    }
+  };
+
+  const submitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPost || !newComment.trim()) return;
+
+    setIsSubmittingComment(true);
+    try {
+      const res = await fetch("/api/admin/posts/comments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          postId: selectedPost.id,
+          content: newComment.trim(),
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to submit comment");
+
+      const data = await res.json();
+      setComments((prev) => [data.comment, ...prev]);
+      setNewComment("");
+    } catch (err: any) {
+      console.error("Error submitting comment:", err);
+      alert("Failed to submit comment. Please try again.");
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const handlePostClick = (post: Post) => {
+    setSelectedPost(post);
+    setIsModalOpen(true);
+    fetchComments(post.id);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedPost(null);
+    setComments([]);
+    setNewComment("");
+  };
 
   const handleLogout = () => {
     router.push("/");
@@ -151,7 +221,8 @@ export default function AdminDashboard() {
               {posts.map((post) => (
                 <div
                   key={post.id}
-                  className="bg-white p-4 rounded-lg shadow-md"
+                  className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200"
+                  onClick={() => handlePostClick(post)}
                 >
                   <img
                     src="/placeholder-icon.jpg"
@@ -162,10 +233,13 @@ export default function AdminDashboard() {
                   <p className="text-gray-500 text-sm mb-1">
                     {new Date(post.time).toLocaleDateString()}
                   </p>
-                  <p className="text-sm">{post.paragraph}</p>
+                  <p className="text-sm line-clamp-3">{post.paragraph}</p>
                   <p className="text-blue-500 text-sm mt-2">
                     ❤️ {post.likes} Likes
                   </p>
+                  <div className="mt-2 text-xs text-gray-400">
+                    Click to view details
+                  </div>
                 </div>
               ))}
             </div>
@@ -194,6 +268,181 @@ export default function AdminDashboard() {
           <p className="text-gray-600">
             Tributes content will be displayed here.
           </p>
+        </div>
+      )}
+
+      {/* Post Detail Modal */}
+      {isModalOpen && selectedPost && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              {/* Modal Header */}
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  Post Details
+                </h2>
+                <button
+                  onClick={closeModal}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Post Content */}
+              <div className="space-y-4">
+                <img
+                  src="/placeholder-icon.jpg"
+                  alt={selectedPost.title}
+                  className="w-full h-64 object-cover rounded-lg"
+                />
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Title
+                    </label>
+                    <p className="text-gray-900 font-semibold text-lg">
+                      {selectedPost.title}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date Posted
+                    </label>
+                    <p className="text-gray-900">
+                      {new Date(selectedPost.time).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Content
+                    </label>
+                    <p className="text-gray-900 leading-relaxed">
+                      {selectedPost.paragraph}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Likes
+                    </label>
+                    <button
+                      className={`flex items-center gap-1 text-lg font-medium focus:outline-none transition-colors ${
+                        selectedPost.likes > 0
+                          ? "text-pink-500"
+                          : "text-gray-400"
+                      } hover:scale-110`}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPost((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                likes: prev.likes + 1,
+                              }
+                            : prev
+                        );
+                        setPosts((prevPosts) =>
+                          prevPosts.map((post) =>
+                            post.id === selectedPost.id
+                              ? { ...post, likes: post.likes + 1 }
+                              : post
+                          )
+                        );
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill={selectedPost.likes > 0 ? "currentColor" : "none"}
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        className="w-6 h-6"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z"
+                        />
+                      </svg>
+                      <span className="text-base">{selectedPost.likes}</span>
+                    </button>
+                  </div>
+
+                  <div>
+                    {/* Comment Section */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Comments
+                      </label>
+
+                      {/* Comments List */}
+                      <div className="space-y-2 mb-2 max-h-60 overflow-y-auto">
+                        {isLoadingComments ? (
+                          <div className="text-gray-500 text-sm">
+                            Loading comments...
+                          </div>
+                        ) : comments.length === 0 ? (
+                          <div className="text-gray-500 text-sm">
+                            No comments yet. Be the first to comment!
+                          </div>
+                        ) : (
+                          comments.map((comment) => (
+                            <div
+                              key={comment.id}
+                              className="bg-gray-100 rounded p-2"
+                            >
+                              <span className="text-gray-700">
+                                {comment.content}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Add Comment Form */}
+                      <form
+                        className="flex gap-2 mt-2"
+                        onSubmit={submitComment}
+                      >
+                        <input
+                          type="text"
+                          className="flex-1 border rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          placeholder="Add a comment..."
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          disabled={isSubmittingComment}
+                        />
+                        <button
+                          type="submit"
+                          className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={isSubmittingComment || !newComment.trim()}
+                        >
+                          {isSubmittingComment ? "Posting..." : "Post"}
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Actions */}
+                <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                  <button
+                    onClick={closeModal}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+                  <button className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">
+                    Edit Post
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
