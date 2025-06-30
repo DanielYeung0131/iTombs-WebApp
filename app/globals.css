@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f3e8ff; /* Light lavender */
+  --foreground: #3b0764; /* Deep purple */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1e0033; /* Very dark purple */
+    --foreground: #8b5cf6; /* Slightly darker purple text */
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
