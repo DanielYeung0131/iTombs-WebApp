@@ -27,6 +27,7 @@ export default function AdminDashboard() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState("");
   const [user, setUser] = useState<User | null>(null);
+  const [activeTab, setActiveTab] = useState(0); // Track active tab
   const router = useRouter();
 
   useEffect(() => {
@@ -83,6 +84,8 @@ export default function AdminDashboard() {
     router.push("/");
   };
 
+  const tabs = ["Timeline", "Bio", "Media", "Tributes"];
+
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       {/* Profile Header */}
@@ -114,42 +117,85 @@ export default function AdminDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="max-w-2xl mx-auto mt-6 border-b flex justify-around text-gray-600 font-medium">
-        {["Timeline", "Bio", "Media", "Tributes"].map((tab) => (
-          <button key={tab} className="py-2 hover:text-black">
-            {tab}
-          </button>
-        ))}
+      <div className="max-w-2xl mx-auto mt-8">
+        <div className="flex justify-between bg-white rounded-xl shadow p-2 mb-2">
+          {tabs.map((tab, idx) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(idx)}
+              className="flex-1 py-2 mx-1 rounded-lg transition-colors duration-150 
+            text-gray-600 font-semibold hover:bg-yellow-100 hover:text-yellow-700 focus:outline-none"
+              style={{
+                borderBottom:
+                  idx === activeTab
+                    ? "3px solid #F59E42"
+                    : "3px solid transparent",
+                background: idx === activeTab ? "#FFF7E6" : "transparent",
+                color: idx === activeTab ? "#F59E42" : undefined,
+              }}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Media Posts */}
-      <div className="max-w-2xl mx-auto mt-6">
-        {/* <h2 className="text-xl font-semibold mb-4">Your Posts</h2> */}
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        {posts.length === 0 ? (
-          <p className="text-gray-500">No posts available.</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {posts.map((post) => (
-              <div key={post.id} className="bg-white p-4 rounded-lg shadow-md">
-                <img
-                  src="/placeholder-icon.jpg"
-                  alt={post.title}
-                  className="rounded-md h-40 w-full object-cover mb-2"
-                />
-                <h3 className="text-md font-semibold">{post.title}</h3>
-                <p className="text-gray-500 text-sm mb-1">
-                  {new Date(post.time).toLocaleDateString()}
-                </p>
-                <p className="text-sm">{post.paragraph}</p>
-                <p className="text-blue-500 text-sm mt-2">
-                  ❤️ {post.likes} Likes
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Media Posts - Only show when Timeline tab is active */}
+      {activeTab === 0 && (
+        <div className="max-w-2xl mx-auto mt-6">
+          {error && <p className="text-red-500 mb-4">{error}</p>}
+          {posts.length === 0 ? (
+            <p className="text-gray-500">No posts available.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {posts.map((post) => (
+                <div
+                  key={post.id}
+                  className="bg-white p-4 rounded-lg shadow-md"
+                >
+                  <img
+                    src="/placeholder-icon.jpg"
+                    alt={post.title}
+                    className="rounded-md h-40 w-full object-cover mb-2"
+                  />
+                  <h3 className="text-md font-semibold">{post.title}</h3>
+                  <p className="text-gray-500 text-sm mb-1">
+                    {new Date(post.time).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm">{post.paragraph}</p>
+                  <p className="text-blue-500 text-sm mt-2">
+                    ❤️ {post.likes} Likes
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Content for other tabs */}
+      {activeTab === 1 && (
+        <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Bio</h2>
+          <p className="text-gray-600">Bio content will be displayed here.</p>
+        </div>
+      )}
+
+      {activeTab === 2 && (
+        <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Media</h2>
+          <p className="text-gray-600">Media content will be displayed here.</p>
+        </div>
+      )}
+
+      {activeTab === 3 && (
+        <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Tributes</h2>
+          <p className="text-gray-600">
+            Tributes content will be displayed here.
+          </p>
+        </div>
+      )}
 
       {/* Logout */}
       <div className="flex justify-center mt-10">
