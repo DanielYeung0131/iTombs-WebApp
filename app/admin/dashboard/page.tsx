@@ -564,7 +564,7 @@ export default function AdminDashboard() {
                   <img
                     src={getImageUrl(post.id, post.has_image || false)}
                     alt={post.title}
-                    className="rounded-md h-40 w-full object-cover hover:opacity-90 transition-opacity"
+                    className="rounded-md h-55 w-full object-cover hover:opacity-90 transition-opacity duration-200"
                     onClick={() => handlePostClick(post)}
                   />
                 </div>
