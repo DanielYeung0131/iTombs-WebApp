@@ -9,6 +9,7 @@ interface Post {
   paragraph: string;
   time: string;
   likes: number;
+  image?: string; // Add this line
 }
 
 interface User {
@@ -40,6 +41,21 @@ export default function AdminDashboard() {
   const [newComment, setNewComment] = useState("");
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedPost, setEditedPost] = useState<Post | null>(null);
+  const [isUpdatingPost, setIsUpdatingPost] = useState(false);
+  const [isDeletingPost, setIsDeletingPost] = useState(false);
+  const [newPostImage, setNewPostImage] = useState<File | null>(null);
+  const [newPostImagePreview, setNewPostImagePreview] = useState<string>("");
+  const [editedPostImage, setEditedPostImage] = useState<File | null>(null);
+  const [editedPostImagePreview, setEditedPostImagePreview] =
+    useState<string>("");
+
+  // Add Post Modal States
+  const [isAddPostModalOpen, setIsAddPostModalOpen] = useState(false);
+  const [newPost, setNewPost] = useState({ title: "", paragraph: "" });
+  const [isCreatingPost, setIsCreatingPost] = useState(false);
+
   const router = useRouter();
 
   useEffect(() => {
@@ -92,6 +108,37 @@ export default function AdminDashboard() {
     if (userId) fetchUser();
   }, [userId]);
 
+  const handleImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    isEdit = false
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (isEdit) {
+        setEditedPostImage(file);
+        const reader = new FileReader();
+        reader.onload = () =>
+          setEditedPostImagePreview(reader.result as string);
+        reader.readAsDataURL(file);
+      } else {
+        setNewPostImage(file);
+        const reader = new FileReader();
+        reader.onload = () => setNewPostImagePreview(reader.result as string);
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
+  const removeImage = (isEdit = false) => {
+    if (isEdit) {
+      setEditedPostImage(null);
+      setEditedPostImagePreview("");
+    } else {
+      setNewPostImage(null);
+      setNewPostImagePreview("");
+    }
+  };
+
   const fetchComments = async (postId: number) => {
     setIsLoadingComments(true);
     try {
@@ -137,6 +184,144 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleCreatePost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPost.title.trim() || !newPost.paragraph.trim() || !userId) return;
+
+    setIsCreatingPost(true);
+    try {
+      const formData = new FormData();
+      formData.append("userId", userId);
+      formData.append("title", newPost.title.trim());
+      formData.append("paragraph", newPost.paragraph.trim());
+
+      if (newPostImage) {
+        formData.append("image", newPostImage);
+      }
+
+      const res = await fetch("/api/admin/posts", {
+        method: "POST",
+        body: formData, // Changed from JSON to FormData
+      });
+
+      if (!res.ok) throw new Error("Failed to create post");
+
+      const data = await res.json();
+
+      // Add the new post to the beginning of the posts array
+      setPosts((prevPosts) => [data.post, ...prevPosts]);
+
+      // Reset form and close modal
+      setNewPost({ title: "", paragraph: "" });
+      setNewPostImage(null);
+      setNewPostImagePreview("");
+      setIsAddPostModalOpen(false);
+
+      alert("Post created successfully!");
+    } catch (err: any) {
+      console.error("Error creating post:", err);
+      alert("Failed to create post. Please try again.");
+    } finally {
+      setIsCreatingPost(false);
+    }
+  };
+
+  const handleEditPost = () => {
+    if (selectedPost) {
+      setEditedPost({ ...selectedPost });
+      setEditedPostImagePreview(selectedPost.image || "");
+      setIsEditMode(true);
+    }
+  };
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditedPost(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editedPost) return;
+
+    setIsUpdatingPost(true);
+    try {
+      const formData = new FormData();
+      formData.append("id", editedPost.id.toString());
+      formData.append("title", editedPost.title);
+      formData.append("paragraph", editedPost.paragraph);
+
+      if (editedPostImage) {
+        formData.append("image", editedPostImage);
+      }
+
+      const res = await fetch(`/api/admin/posts`, {
+        method: "PUT",
+        body: formData, // Changed from JSON to FormData
+      });
+
+      if (!res.ok) throw new Error("Failed to update post");
+
+      const data = await res.json();
+
+      // Update the posts array
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post.id === editedPost.id ? { ...post, ...data.post } : post
+        )
+      );
+
+      // Update the selected post
+      setSelectedPost({ ...selectedPost!, ...data.post });
+
+      setIsEditMode(false);
+      setEditedPost(null);
+      setEditedPostImage(null);
+      setEditedPostImagePreview("");
+      alert("Post updated successfully!");
+    } catch (err: any) {
+      console.error("Error updating post:", err);
+      alert("Failed to update post. Please try again.");
+    } finally {
+      setIsUpdatingPost(false);
+    }
+  };
+
+  const handleDeletePost = async () => {
+    if (!selectedPost) return;
+
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this post? This action cannot be undone."
+    );
+
+    if (!confirmDelete) return;
+
+    setIsDeletingPost(true);
+    try {
+      const res = await fetch(`/api/admin/posts`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          postId: selectedPost.id,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to delete post");
+
+      // Remove the post from the posts array
+      setPosts((prevPosts) =>
+        prevPosts.filter((post) => post.id !== selectedPost.id)
+      );
+
+      closeModal();
+      alert("Post deleted successfully!");
+    } catch (err: any) {
+      console.error("Error deleting post:", err);
+      alert("Failed to delete post. Please try again.");
+    } finally {
+      setIsDeletingPost(false);
+    }
+  };
+
   const handlePostClick = (post: Post) => {
     setSelectedPost(post);
     setIsModalOpen(true);
@@ -148,6 +333,17 @@ export default function AdminDashboard() {
     setSelectedPost(null);
     setComments([]);
     setNewComment("");
+    setIsEditMode(false);
+    setEditedPost(null);
+    setEditedPostImage(null);
+    setEditedPostImagePreview("");
+  };
+
+  const closeAddPostModal = () => {
+    setIsAddPostModalOpen(false);
+    setNewPost({ title: "", paragraph: "" });
+    setNewPostImage(null);
+    setNewPostImagePreview("");
   };
 
   const handleLogout = () => {
@@ -210,6 +406,18 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* Add Post Button - Only show when Timeline tab is active */}
+      {activeTab === 0 && (
+        <div className="max-w-2xl mx-auto mt-4">
+          <button
+            onClick={() => setIsAddPostModalOpen(true)}
+            className="w-full bg-yellow-500 text-white py-3 px-4 rounded-lg hover:bg-yellow-600 transition-colors font-semibold shadow-md"
+          >
+            + Add New Post
+          </button>
+        </div>
+      )}
+
       {/* Media Posts - Only show when Timeline tab is active */}
       {activeTab === 0 && (
         <div className="max-w-2xl mx-auto mt-6">
@@ -225,7 +433,7 @@ export default function AdminDashboard() {
                   onClick={() => handlePostClick(post)}
                 >
                   <img
-                    src="/placeholder-icon.jpg"
+                    src={post.image || "/placeholder-icon.jpg"}
                     alt={post.title}
                     className="rounded-md h-40 w-full object-cover mb-2"
                   />
@@ -271,6 +479,116 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Add Post Modal */}
+      {isAddPostModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              {/* Modal Header */}
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  Add New Post
+                </h2>
+                <button
+                  onClick={closeAddPostModal}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Add Post Form */}
+              <form onSubmit={handleCreatePost} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Post Image (Optional)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload(e, false)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  />
+                  {newPostImagePreview && (
+                    <div className="mt-2 relative">
+                      <img
+                        src={newPostImagePreview}
+                        alt="Preview"
+                        className="w-full h-48 object-cover rounded-md"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(false)}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Post Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={newPost.title}
+                    onChange={(e) =>
+                      setNewPost((prev) => ({ ...prev, title: e.target.value }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    placeholder="Enter post title..."
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Post Content *
+                  </label>
+                  <textarea
+                    value={newPost.paragraph}
+                    onChange={(e) =>
+                      setNewPost((prev) => ({
+                        ...prev,
+                        paragraph: e.target.value,
+                      }))
+                    }
+                    rows={6}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    placeholder="Write your post content here..."
+                    required
+                  />
+                </div>
+
+                {/* Modal Actions */}
+                <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={closeAddPostModal}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                    disabled={isCreatingPost}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={
+                      isCreatingPost ||
+                      !newPost.title.trim() ||
+                      !newPost.paragraph.trim()
+                    }
+                  >
+                    {isCreatingPost ? "Creating..." : "Create Post"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Post Detail Modal */}
       {isModalOpen && selectedPost && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -279,7 +597,7 @@ export default function AdminDashboard() {
               {/* Modal Header */}
               <div className="flex justify-between items-start mb-4">
                 <h2 className="text-2xl font-bold text-gray-800">
-                  Post Details
+                  {isEditMode ? "Edit Post" : "Post Details"}
                 </h2>
                 <button
                   onClick={closeModal}
@@ -290,21 +608,68 @@ export default function AdminDashboard() {
               </div>
 
               {/* Post Content */}
-              <div className="space-y-4">
-                <img
-                  src="/placeholder-icon.jpg"
-                  alt={selectedPost.title}
-                  className="w-full h-64 object-cover rounded-lg"
-                />
+              <div className="space-y-3">
+                {isEditMode ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Post Image
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(e, true)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 mb-2"
+                    />
+                    {(editedPostImagePreview || selectedPost.image) && (
+                      <div className="relative">
+                        <img
+                          src={
+                            editedPostImagePreview ||
+                            selectedPost.image ||
+                            "/placeholder-icon.jpg"
+                          }
+                          alt={selectedPost.title}
+                          className="w-full h-64 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(true)}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <img
+                    src={selectedPost.image || "/placeholder-icon.jpg"}
+                    alt={selectedPost.title}
+                    className="w-full h-64 object-cover rounded-lg"
+                  />
+                )}
 
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Title
                     </label>
-                    <p className="text-gray-900 font-semibold text-lg">
-                      {selectedPost.title}
-                    </p>
+                    {isEditMode ? (
+                      <input
+                        type="text"
+                        value={editedPost?.title || ""}
+                        onChange={(e) =>
+                          setEditedPost((prev) =>
+                            prev ? { ...prev, title: e.target.value } : null
+                          )
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      />
+                    ) : (
+                      <p className="text-gray-900 font-semibold text-lg">
+                        {selectedPost.title}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -320,125 +685,186 @@ export default function AdminDashboard() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Content
                     </label>
-                    <p className="text-gray-900 leading-relaxed">
-                      {selectedPost.paragraph}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Likes
-                    </label>
-                    <button
-                      className={`flex items-center gap-1 text-lg font-medium focus:outline-none transition-colors ${
-                        selectedPost.likes > 0
-                          ? "text-pink-500"
-                          : "text-gray-400"
-                      } hover:scale-110`}
-                      type="button"
-                      onClick={() => {
-                        setSelectedPost((prev) =>
-                          prev
-                            ? {
-                                ...prev,
-                                likes: prev.likes + 1,
-                              }
-                            : prev
-                        );
-                        setPosts((prevPosts) =>
-                          prevPosts.map((post) =>
-                            post.id === selectedPost.id
-                              ? { ...post, likes: post.likes + 1 }
-                              : post
+                    {isEditMode ? (
+                      <textarea
+                        value={editedPost?.paragraph || ""}
+                        onChange={(e) =>
+                          setEditedPost((prev) =>
+                            prev ? { ...prev, paragraph: e.target.value } : null
                           )
-                        );
-                      }}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill={selectedPost.likes > 0 ? "currentColor" : "none"}
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        className="w-6 h-6"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z"
-                        />
-                      </svg>
-                      <span className="text-base">{selectedPost.likes}</span>
-                    </button>
+                        }
+                        rows={4}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      />
+                    ) : (
+                      <p className="text-gray-900 leading-relaxed">
+                        {selectedPost.paragraph}
+                      </p>
+                    )}
                   </div>
 
-                  <div>
-                    {/* Comment Section */}
+                  {!isEditMode && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Comments
+                        Likes
                       </label>
-
-                      {/* Comments List */}
-                      <div className="space-y-2 mb-2 max-h-60 overflow-y-auto">
-                        {isLoadingComments ? (
-                          <div className="text-gray-500 text-sm">
-                            Loading comments...
-                          </div>
-                        ) : comments.length === 0 ? (
-                          <div className="text-gray-500 text-sm">
-                            No comments yet. Be the first to comment!
-                          </div>
-                        ) : (
-                          comments.map((comment) => (
-                            <div
-                              key={comment.id}
-                              className="bg-gray-100 rounded p-2"
-                            >
-                              <span className="text-gray-700">
-                                {comment.content}
-                              </span>
-                            </div>
-                          ))
-                        )}
-                      </div>
-
-                      {/* Add Comment Form */}
-                      <form
-                        className="flex gap-2 mt-2"
-                        onSubmit={submitComment}
+                      <button
+                        className={`flex items-center gap-1 text-lg font-medium focus:outline-none transition-colors ${
+                          selectedPost.likes > 0
+                            ? "text-pink-500"
+                            : "text-gray-400"
+                        } hover:scale-110`}
+                        type="button"
+                        onClick={() => {
+                          setSelectedPost((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  likes: prev.likes + 1,
+                                }
+                              : prev
+                          );
+                          setPosts((prevPosts) =>
+                            prevPosts.map((post) =>
+                              post.id === selectedPost.id
+                                ? { ...post, likes: post.likes + 1 }
+                                : post
+                            )
+                          );
+                          fetch(`/api/admin/posts/likes`, {
+                            method: "PUT",
+                            headers: {
+                              "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                              id: selectedPost.id,
+                            }),
+                          }).catch((err) => {
+                            console.error("Error updating likes:", err);
+                          });
+                        }}
                       >
-                        <input
-                          type="text"
-                          className="flex-1 border rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                          placeholder="Add a comment..."
-                          value={newComment}
-                          onChange={(e) => setNewComment(e.target.value)}
-                          disabled={isSubmittingComment}
-                        />
-                        <button
-                          type="submit"
-                          className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={isSubmittingComment || !newComment.trim()}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill={
+                            selectedPost.likes > 0 ? "currentColor" : "none"
+                          }
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          className="w-6 h-6"
                         >
-                          {isSubmittingComment ? "Posting..." : "Post"}
-                        </button>
-                      </form>
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z"
+                          />
+                        </svg>
+                        <span className="text-base">{selectedPost.likes}</span>
+                      </button>
                     </div>
-                  </div>
+                  )}
+
+                  {!isEditMode && (
+                    <div>
+                      {/* Comment Section */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Comments
+                        </label>
+
+                        {/* Comments List */}
+                        <div className="space-y-2 mb-2 max-h-60 overflow-y-auto">
+                          {isLoadingComments ? (
+                            <div className="text-gray-500 text-sm">
+                              Loading comments...
+                            </div>
+                          ) : comments.length === 0 ? (
+                            <div className="text-gray-500 text-sm">
+                              No comments yet. Be the first to comment!
+                            </div>
+                          ) : (
+                            comments.map((comment) => (
+                              <div
+                                key={comment.id}
+                                className="bg-gray-100 rounded p-2"
+                              >
+                                <span className="text-gray-700">
+                                  {comment.content}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+
+                        {/* Add Comment Form */}
+                        <form
+                          className="flex gap-2 mt-2"
+                          onSubmit={submitComment}
+                        >
+                          <input
+                            type="text"
+                            className="flex-1 border rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                            placeholder="Add a comment..."
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            disabled={isSubmittingComment}
+                          />
+                          <button
+                            type="submit"
+                            className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isSubmittingComment || !newComment.trim()}
+                          >
+                            {isSubmittingComment ? "Posting..." : "Post"}
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Modal Actions */}
                 <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-                  <button
-                    onClick={closeModal}
-                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
-                  >
-                    Close
-                  </button>
-                  <button className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">
-                    Edit Post
-                  </button>
+                  {isEditMode ? (
+                    <>
+                      <button
+                        onClick={handleCancelEdit}
+                        className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                        disabled={isUpdatingPost}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveEdit}
+                        className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isUpdatingPost}
+                      >
+                        {isUpdatingPost ? "Saving..." : "Save Changes"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={closeModal}
+                        className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                      >
+                        Close
+                      </button>
+                      <button
+                        onClick={handleDeletePost}
+                        className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isDeletingPost}
+                      >
+                        {isDeletingPost ? "Deleting..." : "Delete Post"}
+                      </button>
+                      <button
+                        onClick={handleEditPost}
+                        className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                      >
+                        Edit Post
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
