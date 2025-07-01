@@ -15,7 +15,8 @@ interface Post {
 
 interface User {
   id: number;
-  icon: string;
+  has_icon?: boolean; // Changed from image?: string
+  icon_mime_type?: string;
   name: string;
   birthday: string;
   dateOfDeath: string;
@@ -97,10 +98,15 @@ export default function AdminDashboard() {
         const res = await fetch(`/api/admin/users?user=${parseInt(userId)}`);
         if (!res.ok) throw new Error("Failed to fetch user");
         const data = await res.json();
-        console.log("Fetched user data:", data.user[0][0]);
-        data.user[0][0].birthday = data.user[0][0].birthday.split("T")[0];
-        data.user[0][0].dateOfDeath = data.user[0][0].dateOfDeath.split("T")[0];
-        setUser(data.user[0][0]);
+        console.log("Fetched user data:", data.user);
+        const user = data.user;
+        if (user.birthday) {
+          user.birthday = user.birthday.split("T")[0];
+        }
+        if (user.dateOfDeath) {
+          user.dateOfDeath = user.dateOfDeath.split("T")[0];
+        }
+        setUser(user);
       } catch (err: any) {
         setError(err.message || "Unknown error");
       }
@@ -112,6 +118,12 @@ export default function AdminDashboard() {
   const getImageUrl = (postId: number, hasImage: boolean) => {
     return hasImage
       ? `/api/admin/posts/images?postId=${postId}`
+      : "/placeholder-icon.jpg";
+  };
+
+  const getUserIconUrl = (userId: number, hasIcon: boolean) => {
+    return hasIcon
+      ? `/api/admin/users/icon?userId=${userId}`
       : "/placeholder-icon.jpg";
   };
 
@@ -364,7 +376,11 @@ export default function AdminDashboard() {
       {/* Profile Header */}
       <div className="bg-white max-w-2xl mx-auto p-6 rounded-xl shadow-lg text-center relative">
         <img
-          src={user?.icon || "/placeholder-icon.jpg"}
+          src={
+            user?.has_icon
+              ? getUserIconUrl(user.id, user.has_icon)
+              : "/placeholder-icon.jpg"
+          }
           alt="User Icon"
           className="w-24 h-24 rounded-full mx-auto border-4 border-white shadow-md object-cover"
         />
@@ -383,8 +399,13 @@ export default function AdminDashboard() {
           <button className="border px-4 py-2 rounded-full text-sm text-yellow-600 border-yellow-500 hover:bg-yellow-100">
             🔄 Share
           </button>
-          <button className="border px-4 py-2 rounded-full text-sm text-yellow-600 border-yellow-500 hover:bg-yellow-100">
-            ⋯
+          <button
+            className="border px-4 py-2 rounded-full text-sm text-yellow-600 border-yellow-500 hover:bg-yellow-100"
+            onClick={() =>
+              router.push("/admin/settings" + (userId ? `?user=${userId}` : ""))
+            }
+          >
+            📝 Edit Profile
           </button>
         </div>
       </div>
