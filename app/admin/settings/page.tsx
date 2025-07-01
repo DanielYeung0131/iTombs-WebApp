@@ -13,6 +13,7 @@ interface User {
   gender: string;
   address: string;
   intro: string;
+  icon_file?: File | null; // Add this to track the current icon file
 }
 
 export default function AdminSettings() {
@@ -23,9 +24,7 @@ export default function AdminSettings() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-  const [newIcon, setNewIcon] = useState<File | null>(null);
-  const [newIconPreview, setNewIconPreview] = useState<string>("");
-  const [removeIcon, setRemoveIcon] = useState(false);
+  const [iconPreview, setIconPreview] = useState<string>("");
 
   const router = useRouter();
 
@@ -49,7 +48,7 @@ export default function AdminSettings() {
         if (!res.ok) throw new Error("Failed to fetch user");
         const data = await res.json();
 
-        console.log("Fetched user data:", data); // Debug log
+        console.log("Fetched user data:", data);
 
         // Handle different possible response structures
         let userData;
@@ -77,8 +76,16 @@ export default function AdminSettings() {
           userData.dateOfDeath = userData.dateOfDeath.split("T")[0];
         }
 
+        // Initialize icon_file as null
+        userData.icon_file = null;
+
         setUser(userData);
         setEditedUser({ ...userData });
+
+        // Set initial icon preview if user has an icon
+        if (userData.has_icon) {
+          setIconPreview(getUserIconUrl(parseInt(userId), true));
+        }
       } catch (err: any) {
         setError(err.message || "Unknown error");
       } finally {
@@ -97,19 +104,23 @@ export default function AdminSettings() {
 
   const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setNewIcon(file);
-      setRemoveIcon(false);
+    if (file && editedUser) {
+      // Update editedUser with the new icon file
+      setEditedUser({ ...editedUser, icon_file: file, has_icon: true });
+
+      // Create preview
       const reader = new FileReader();
-      reader.onload = () => setNewIconPreview(reader.result as string);
+      reader.onload = () => setIconPreview(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
   const handleRemoveIcon = () => {
-    setNewIcon(null);
-    setNewIconPreview("");
-    setRemoveIcon(true);
+    if (editedUser) {
+      // Set icon_file to null and has_icon to false
+      setEditedUser({ ...editedUser, icon_file: null, has_icon: false });
+      setIconPreview("/placeholder-icon.jpg");
+    }
   };
 
   const handleInputChange = (field: keyof User, value: string) => {
@@ -136,9 +147,11 @@ export default function AdminSettings() {
       formData.append("address", editedUser.address);
       formData.append("intro", editedUser.intro);
 
-      if (newIcon) {
-        formData.append("icon", newIcon);
-      } else if (removeIcon) {
+      // Simple icon handling - just send whatever is in editedUser
+      if (editedUser.icon_file) {
+        formData.append("icon", editedUser.icon_file);
+      } else if (!editedUser.has_icon) {
+        // If has_icon is false, we want to remove the icon
         formData.append("removeIcon", "true");
       }
 
@@ -152,13 +165,21 @@ export default function AdminSettings() {
       const data = await res.json();
 
       // Update the user state with the new data
-      setUser({ ...editedUser, has_icon: data.user.has_icon });
-      setEditedUser({ ...editedUser, has_icon: data.user.has_icon });
+      const updatedUser = {
+        ...editedUser,
+        has_icon: data.user.has_icon,
+        icon_file: null, // Clear the file after successful upload
+      };
 
-      // Clear the icon upload states
-      setNewIcon(null);
-      setNewIconPreview("");
-      setRemoveIcon(false);
+      setUser(updatedUser);
+      setEditedUser(updatedUser);
+
+      // Update icon preview if icon was uploaded/removed
+      if (data.user.has_icon) {
+        setIconPreview(getUserIconUrl(parseInt(userId), true));
+      } else {
+        setIconPreview("/placeholder-icon.jpg");
+      }
 
       setSuccessMessage("Profile updated successfully!");
 
@@ -173,10 +194,12 @@ export default function AdminSettings() {
 
   const handleCancel = () => {
     if (user) {
-      setEditedUser({ ...user });
-      setNewIcon(null);
-      setNewIconPreview("");
-      setRemoveIcon(false);
+      setEditedUser({ ...user, icon_file: null });
+      setIconPreview(
+        user.has_icon
+          ? getUserIconUrl(parseInt(userId || "0"), true)
+          : "/placeholder-icon.jpg"
+      );
       setError("");
       setSuccessMessage("");
     }
@@ -245,15 +268,7 @@ export default function AdminSettings() {
           <div className="text-center mb-6">
             <div className="relative inline-block">
               <img
-                src={
-                  newIconPreview ||
-                  (removeIcon
-                    ? "/placeholder-icon.jpg"
-                    : getUserIconUrl(
-                        parseInt(userId || "0"),
-                        user.has_icon || false
-                      ))
-                }
+                src={iconPreview || "/placeholder-icon.jpg"}
                 alt="Profile Icon"
                 className="w-24 h-24 rounded-full border-4 border-white shadow-md object-cover"
               />
@@ -289,7 +304,7 @@ export default function AdminSettings() {
                   className="hidden"
                 />
               </label>
-              {(user.has_icon || newIconPreview) && !removeIcon && (
+              {editedUser.has_icon && (
                 <button
                   type="button"
                   onClick={handleRemoveIcon}
@@ -351,14 +366,28 @@ export default function AdminSettings() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Date of Death
               </label>
-              <input
-                type="date"
-                value={editedUser.dateOfDeath}
-                onChange={(e) =>
-                  handleInputChange("dateOfDeath", e.target.value)
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={editedUser.dateOfDeath || ""}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "dateOfDeath",
+                      e.target.value === "" ? "" : e.target.value
+                    )
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                />
+                {editedUser.dateOfDeath && (
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange("dateOfDeath", "")}
+                    className="ml-2 px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors text-xs"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
               <p className="text-xs text-gray-500 mt-1">
                 Leave empty if still living
               </p>

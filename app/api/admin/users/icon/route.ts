@@ -39,3 +39,35 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const userId = new URL(request.url).searchParams.get("userId");
+
+    if (!userId || isNaN(Number(userId))) {
+      return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+    }
+
+    // Remove the icon from the database
+    const [result] = await db.execute(
+      "UPDATE User SET icon_blob = NULL, icon_mime_type = NULL WHERE id = ?",
+      [userId]
+    );
+
+    // Check if any row was affected
+    if ((result as any).affectedRows === 0) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(
+      { message: "Icon deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Database error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete icon" },
+      { status: 500 }
+    );
+  }
+}
