@@ -15,7 +15,7 @@ interface Post {
 
 interface User {
   id: number;
-  has_icon?: boolean; // Changed from image?: string
+  has_icon?: boolean;
   icon_mime_type?: string;
   name: string;
   birthday: string;
@@ -23,6 +23,8 @@ interface User {
   gender: string;
   address: string;
   intro: string;
+  has_background?: boolean; // Add this field
+  background_mime_type?: string; // Add this field
 }
 
 interface Comment {
@@ -52,6 +54,9 @@ export default function AdminDashboard() {
   const [editedPostImage, setEditedPostImage] = useState<File | null>(null);
   const [editedPostImagePreview, setEditedPostImagePreview] =
     useState<string>("");
+  const [isUploadingBackground, setIsUploadingBackground] = useState(false);
+  const [backgroundUploadInput, setBackgroundUploadInput] =
+    useState<HTMLInputElement | null>(null);
 
   // Add Post Modal States
   const [isAddPostModalOpen, setIsAddPostModalOpen] = useState(false);
@@ -110,6 +115,8 @@ export default function AdminDashboard() {
       } catch (err: any) {
         setError(err.message || "Unknown error");
       }
+
+      // console.log("User:", user);
     };
 
     if (userId) fetchUser();
@@ -125,6 +132,69 @@ export default function AdminDashboard() {
     return hasIcon
       ? `/api/admin/users/icon?userId=${userId}`
       : "/placeholder-icon.jpg";
+  };
+
+  const getUserBackgroundUrl = (userId: number, hasBackground: boolean) => {
+    return hasBackground
+      ? `/api/admin/users/background?userId=${userId}`
+      : null;
+  };
+
+  const handleBackgroundUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+
+    setIsUploadingBackground(true);
+    try {
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64Data = (reader.result as string).split(",")[1]; // Remove data:image/...;base64, prefix
+
+          const res = await fetch("/api/admin/users/background", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              userId: parseInt(userId),
+              background_blob: base64Data,
+              background_mime_type: file.type,
+            }),
+          });
+
+          // console.log("Response from background upload:", res);
+
+          if (!res.ok) throw new Error("Failed to upload background");
+
+          // Update user state to reflect the new background
+          setUser((prev) => (prev ? { ...prev, has_background: true } : prev));
+
+          alert("Background updated successfully!");
+
+          // Force page refresh to show new background
+          window.location.reload();
+        } catch (err: any) {
+          console.error("Error uploading background:", err);
+          alert("Failed to upload background. Please try again.");
+        } finally {
+          setIsUploadingBackground(false);
+          // Reset the input
+          if (backgroundUploadInput) {
+            backgroundUploadInput.value = "";
+          }
+        }
+      };
+
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      console.error("Error reading file:", err);
+      alert("Failed to read file. Please try again.");
+      setIsUploadingBackground(false);
+    }
   };
 
   const handleImageUpload = (
@@ -374,7 +444,63 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       {/* Profile Header */}
-      <div className="bg-white max-w-2xl mx-auto p-6 rounded-xl shadow-lg text-center relative">
+      <div
+        className="max-w-2xl mx-auto p-6 rounded-xl shadow-lg text-center relative overflow-hidden"
+        style={
+          user?.has_background
+            ? {
+                backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url(${getUserBackgroundUrl(
+                  user.id,
+                  user.has_background
+                )})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+              }
+            : { background: "white" }
+        }
+      >
+        {/* Background Upload Button */}
+        <div className="absolute top-4 right-4">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleBackgroundUpload}
+            className="hidden"
+            ref={(input) => setBackgroundUploadInput(input)}
+            id="background-upload"
+            disabled={isUploadingBackground}
+          />
+          <label
+            htmlFor="background-upload"
+            className={`cursor-pointer bg-white/80 hover:bg-white/90 p-2 rounded-full shadow-md transition-all duration-200 flex items-center justify-center ${
+              isUploadingBackground
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:scale-105"
+            }`}
+            title="Upload background image"
+          >
+            {isUploadingBackground ? (
+              <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-5 h-5 text-gray-600"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+                />
+              </svg>
+            )}
+          </label>
+        </div>
+
         <img
           src={
             user?.has_icon

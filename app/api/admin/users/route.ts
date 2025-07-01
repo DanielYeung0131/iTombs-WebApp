@@ -124,7 +124,7 @@ export async function GET(req: Request) {
     if (userId) {
       // Get specific user by ID
       const [rows] = await db.execute(
-        "SELECT id, icon_mime_type, name, birthday, dateOfDeath, gender, address, intro FROM User WHERE id = ?",
+        "SELECT id, icon_mime_type, name, birthday, dateOfDeath, gender, address, intro, background_mime_type FROM User WHERE id = ?",
         [parseInt(userId)]
       );
 
@@ -135,18 +135,20 @@ export async function GET(req: Request) {
 
       const user = users[0];
       user.has_icon = !!user.icon_mime_type;
+      user.has_background = !!user.background_mime_type;
 
       return NextResponse.json({ user: user });
     } else {
       // Get all users
       const [rows] = await db.execute(
-        "SELECT id, icon_mime_type, name, birthday, dateOfDeath, gender, address, intro FROM User ORDER BY name ASC"
+        "SELECT id, icon_mime_type, name, birthday, dateOfDeath, gender, address, intro, background_mime_type FROM User ORDER BY name ASC"
       );
 
-      // Add has_icon flag to each user
+      // Add has_icon and has_background flags to each user
       const users = (rows as any[]).map((user) => ({
         ...user,
         has_icon: !!user.icon_mime_type,
+        has_background: !!user.background_mime_type,
       }));
 
       return NextResponse.json({ users: users });
