@@ -482,7 +482,7 @@ export default function AdminDashboard() {
                           className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer transform hover:-translate-y-1 transition-all duration-300 overflow-hidden border border-gray-100 mx-auto md:mx-0"
                           style={{
                             // width: "clamp(280px, 25vw, 400px)",
-                            minWidth: "360px",
+                            minWidth: "310px",
                             maxWidth: "460px",
                           }}
                           onClick={() => handlePostClick(post)}
