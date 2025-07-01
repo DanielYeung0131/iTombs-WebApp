@@ -466,35 +466,29 @@ export default function AdminDashboard() {
             <p className="text-gray-500 text-center">No posts available.</p>
           ) : (
             <div className="relative">
-              {/* Timeline line */}
-              <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1 bg-gradient-to-b from-blue-400 via-purple-500 to-pink-500"></div>
+              {/* Timeline line - positioned more left of center */}
+              <div className="absolute inset-y-0 left-6 md:left-[26%] w-1 bg-gradient-to-b from-blue-400 via-purple-500 to-pink-500"></div>
 
               {posts.map((post, index) => (
                 <div key={post.id} className="relative mb-12 last:mb-0">
-                  {/* Timeline dot - centered on timeline */}
-                  <div className="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-4 border-blue-500 rounded-full shadow-lg z-10"></div>
+                  {/* Timeline dot - positioned to match the line */}
+                  <div className="absolute left-6 md:left-[26.25%] -translate-x-1/2 w-4 h-4 bg-white border-4 border-blue-500 rounded-full shadow-lg z-10"></div>
 
-                  {/* Alternating layout for left/right positioning */}
-                  <div
-                    className={`flex ${
-                      index % 2 === 0 ? "justify-start" : "justify-end"
-                    }`}
-                  >
-                    <div
-                      className={`w-1/2 ${index % 2 === 0 ? "pl-13" : "pl-13"}`}
-                    >
+                  {/* Responsive layout */}
+                  <div className="flex md:justify-start md:even:justify-end">
+                    <div className="w-full md:w-[32%] pl-12 md:pl-0 md:odd:pl-8 md:even:pr-8 md:odd:mr-[30%] md:even:ml-[30%]">
                       <div className="group">
                         <div
-                          className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer transform hover:-translate-y-1 transition-all duration-300 overflow-hidden border border-gray-100 max-w-xs"
-                          style={{ minWidth: "260px", maxWidth: "320px" }}
+                          className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer transform hover:-translate-y-1 transition-all duration-300 overflow-hidden border border-gray-100 mx-auto md:mx-0"
+                          style={{
+                            // width: "clamp(280px, 25vw, 400px)",
+                            minWidth: "360px",
+                            maxWidth: "460px",
+                          }}
                           onClick={() => handlePostClick(post)}
                         >
-                          {/* Date badge - positioned based on left/right alignment */}
-                          <div
-                            className={`absolute ${
-                              index % 2 === 0 ? "right-85" : "left-85"
-                            } mt-5 top-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-2 py-0.5 rounded-full text-xs font-semibold shadow`}
-                          >
+                          {/* Date badge - responsive positioning */}
+                          <div className="absolute top-2 left-10 md:left-[calc(26%+1rem)] bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow z-10 group-hover:opacity-0">
                             {new Date(post.time).toLocaleDateString("en-US", {
                               month: "short",
                               day: "numeric",
@@ -510,32 +504,32 @@ export default function AdminDashboard() {
                                 post.has_image || false
                               )}
                               alt={post.title}
-                              className="w-full h-28 object-cover group-hover:scale-105 transition-transform duration-300"
+                              className="w-full h-32 md:h-28 object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                           </div>
 
                           {/* Content */}
-                          <div className="p-3">
-                            <h3 className="text-base font-bold text-gray-800 mb-1 group-hover:text-blue-600 transition-colors duration-200 line-clamp-1">
+                          <div className="p-4 md:p-3">
+                            <h3 className="text-lg md:text-base font-bold text-gray-800 mb-2 md:mb-1 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2 md:line-clamp-1">
                               {post.title}
                             </h3>
-                            <p className="text-gray-600 text-xs leading-relaxed mb-2 line-clamp-2">
+                            <p className="text-gray-600 text-sm md:text-xs leading-relaxed mb-3 md:mb-2 line-clamp-3 md:line-clamp-2">
                               {post.paragraph}
                             </p>
 
                             {/* Footer */}
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-1 text-pink-500">
-                                <span className="text-base">❤️</span>
-                                <span className="font-semibold text-sm">
+                              <div className="flex items-center space-x-2 md:space-x-1 text-pink-500">
+                                <span className="text-lg md:text-base">❤️</span>
+                                <span className="font-semibold text-base md:text-sm">
                                   {post.likes}
                                 </span>
-                                <span className="text-gray-400 text-xs">
+                                <span className="text-gray-400 text-sm md:text-xs">
                                   Likes
                                 </span>
                               </div>
-                              <div className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              <div className="text-sm md:text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                 View →
                               </div>
                             </div>
@@ -544,8 +538,6 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
-
-                  {/* Connecting line to next item - no longer needed as timeline is continuous */}
                 </div>
               ))}
             </div>
@@ -593,7 +585,7 @@ export default function AdminDashboard() {
 
       {/* Add Post Modal */}
       {isAddPostModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-20">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               {/* Modal Header */}
@@ -703,7 +695,7 @@ export default function AdminDashboard() {
 
       {/* Post Detail Modal */}
       {isModalOpen && selectedPost && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-20">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               {/* Modal Header */}
