@@ -21,7 +21,7 @@ export async function PUT(request: NextRequest) {
         { status: 400 }
       );
     }
-
+    console.log("icon:", icon);
     const userIdNum = parseInt(userId);
     let iconBuffer = null;
     let iconMimeType = null;

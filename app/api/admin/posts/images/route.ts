@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": post.image_mime_type,
-        "Cache-Control": "public, max-age=31536000, immutable", // Cache for 1 year
+        // "Cache-Control": "public, max-age=31536000, immutable", // Cache for 1 year
         "Content-Length": post.image_blob.length.toString(),
       },
     });
