@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { User, X, ArrowLeft, Plus, Trash2 } from "lucide-react";
-import { useParams } from "next/navigation";
 
 interface TreeNode {
   tree_id: number;
@@ -67,7 +66,7 @@ export default function FamilyTreeVisualization() {
       typeof window !== "undefined"
         ? window.innerWidth + (window.innerWidth < 700 ? 100 : 0)
         : 800, // Initialize with window.innerWidth if available, otherwise a default
-    height: typeof window !== "undefined" ? window.innerHeight - 400 : 450, // Initialize with window.innerHeight if available, otherwise a default
+    height: typeof window !== "undefined" ? window.innerHeight - 350 : 400, // Initialize with window.innerHeight if available, otherwise a default
   });
 
   const windowWidth = typeof window !== "undefined" ? window.innerWidth : 1024;

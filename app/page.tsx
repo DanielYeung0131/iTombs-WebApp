@@ -36,7 +36,7 @@ export default function LoginPage() {
       <div>
         <div className="mb-8 flex flex-col items-center">
           <div className="flex items-center space-x-3 mb-2">
-            <img src="/favicon.ico" alt="iTombs Logo" className="w-40 h-15" />
+            <img src="/favicon.ico" alt="iTombs Logo" className="w-20 h-20" />
             <h1 className="text-5xl font-bold">iTombs</h1>
           </div>
         </div>
