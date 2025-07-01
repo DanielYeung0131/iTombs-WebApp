@@ -61,20 +61,21 @@ export default function FamilyTreeVisualization() {
   const [submitting, setSubmitting] = useState(false);
   const [draggedNode, setDraggedNode] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
   const [svgDimensions, setSvgDimensions] = useState({
-    width: 800,
-    height: 600,
+    width:
+      typeof window !== "undefined"
+        ? window.innerWidth + (window.innerWidth < 700 ? 100 : 0)
+        : 800, // Initialize with window.innerWidth if available, otherwise a default
+    height: typeof window !== "undefined" ? window.innerHeight - 400 : 450, // Initialize with window.innerHeight if available, otherwise a default
   });
-  const [isMobile, setIsMobile] = useState(false);
+
+  const windowWidth = typeof window !== "undefined" ? window.innerWidth : 1024;
+  const isMobileView = windowWidth < 768;
+  const [isMobile, setIsMobile] = useState(isMobileView);
 
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (userId) {
-      fetchTreeData();
-    }
-  }, [userId]);
 
   // Handle responsive dimensions and mobile detection
   useEffect(() => {
@@ -100,6 +101,12 @@ export default function FamilyTreeVisualization() {
       return () => window.removeEventListener("resize", updateDimensions);
     }
   }, []);
+
+  useEffect(() => {
+    if (userId) {
+      fetchTreeData();
+    }
+  }, [userId]);
 
   const fetchTreeData = async () => {
     try {
@@ -129,8 +136,8 @@ export default function FamilyTreeVisualization() {
     const nodes: GraphNode[] = [];
     const edges: GraphEdge[] = [];
 
-    const centerX = svgDimensions.width / 2;
-    const centerY = svgDimensions.height / 2 + 65;
+    const centerX = (svgDimensions.width - (isMobile ? 100 : 200)) / 2;
+    const centerY = svgDimensions.height / 2 + (isMobile ? 40 : 100);
     const baseRadius = isMobile ? 80 : 150;
 
     // Always create root node
@@ -152,17 +159,17 @@ export default function FamilyTreeVisualization() {
 
     // Position other nodes in layers around the root
     const relationshipLayers = {
-      spouse: { angle: 0, distance: isMobile ? 100 : 160 },
-      parent: { angle: -90, distance: isMobile ? 140 : 240 },
-      child: { angle: 90, distance: isMobile ? 140 : 240 },
-      sibling: { angle: 180, distance: isMobile ? 120 : 200 },
-      grandparent: { angle: -90, distance: isMobile ? 180 : 340 },
-      grandchild: { angle: 90, distance: isMobile ? 180 : 340 },
-      aunt: { angle: -135, distance: isMobile ? 150 : 260 },
-      uncle: { angle: -45, distance: isMobile ? 150 : 260 },
-      cousin: { angle: 135, distance: isMobile ? 150 : 260 },
-      nephew: { angle: 45, distance: isMobile ? 150 : 260 },
-      niece: { angle: 45, distance: isMobile ? 160 : 280 },
+      spouse: { angle: 0, distance: isMobile ? 120 : 160 },
+      parent: { angle: -90, distance: isMobile ? 120 : 220 },
+      child: { angle: 90, distance: isMobile ? 120 : 220 },
+      sibling: { angle: 180, distance: isMobile ? 100 : 180 },
+      grandparent: { angle: -125, distance: isMobile ? 210 : 320 },
+      grandchild: { angle: 90, distance: isMobile ? 210 : 320 },
+      aunt: { angle: -135, distance: isMobile ? 130 : 240 },
+      uncle: { angle: -45, distance: isMobile ? 130 : 240 },
+      cousin: { angle: 135, distance: isMobile ? 130 : 240 },
+      nephew: { angle: 45, distance: isMobile ? 130 : 240 },
+      niece: { angle: 45, distance: isMobile ? 140 : 260 },
     };
 
     const relationshipCounts: Record<string, number> = {};
@@ -397,15 +404,22 @@ export default function FamilyTreeVisualization() {
 
           {/* Center: Title & Subtitle */}
           <div className="flex flex-col items-center flex-1 min-w-[180px]">
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 text-center w-full tracking-tight">
-              Family Tree Builder
+            <h1 className="text-3xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-green-500 to-blue-700 text-center w-full tracking-tight drop-shadow-lg">
+              <span className="inline-block align-middle mr-2">
+                <User className="inline w-8 h-8 sm:w-10 sm:h-10 text-blue-500" />
+              </span>
+              Family Tree <span className="text-blue-600">Builder</span>
             </h1>
+            <span className="text-sm sm:text-base text-gray-500 mt-2 text-center block">
+              Visualize and manage your family connections
+            </span>
             {/* <span className="text-sm sm:text-base text-gray-500 mt-1 text-center">
               Visualize and manage your family connections
             </span> */}
           </div>
+        </div>
 
-          {/* Right: Add Button */}
+        <div className="flex justify-center mb-8">
           <button
             onClick={() => setShowAddForm(true)}
             className="flex items-center space-x-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-green-400 via-blue-500 to-blue-700 text-white font-semibold rounded-full shadow-lg hover:from-green-500 hover:via-blue-600 hover:to-blue-800 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm sm:text-base"
