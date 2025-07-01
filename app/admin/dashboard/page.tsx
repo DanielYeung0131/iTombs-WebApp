@@ -705,7 +705,15 @@ export default function AdminDashboard() {
       {activeTab === 3 && (
         <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Family Tree</h2>
-          <p className="text-gray-600">Family tree will be displayed here.</p>
+          <div className="flex justify-center">
+            <a
+              href={user ? `/admin/tree?userid=${user.id}` : "#"}
+              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 text-white rounded-full shadow-lg hover:from-emerald-500 hover:to-cyan-600 transition-all font-semibold text-lg gap-2 border-2 border-emerald-300 hover:scale-105"
+            >
+              <span className="text-2xl">🌳</span>
+              <span>View Family Tree</span>
+            </a>
+          </div>
         </div>
       )}
 
