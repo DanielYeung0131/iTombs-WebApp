@@ -193,7 +193,7 @@ export default function GuestDashboard() {
     }
   };
 
-  const tabs = ["Timeline", "Bio", "Media", "Tributes"];
+  const tabs = ["Timeline", "Bio", "Media", "Family Tree"];
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
@@ -273,7 +273,7 @@ export default function GuestDashboard() {
               {/* Timeline line - positioned more left of center */}
               <div className="absolute inset-y-0 left-6 md:left-[26%] w-1 bg-gradient-to-b from-blue-400 via-purple-500 to-pink-500"></div>
 
-              {posts.map((post, index) => (
+              {posts.map((post) => (
                 <div key={post.id} className="relative mb-12 last:mb-0">
                   {/* Timeline dot - positioned to match the line */}
                   <div className="absolute left-6 md:left-[26.25%] -translate-x-1/2 w-4 h-4 bg-white border-4 border-blue-500 rounded-full shadow-lg z-10"></div>
@@ -283,7 +283,7 @@ export default function GuestDashboard() {
                     <div className="w-full md:w-[32%] pl-12 md:pl-0 md:odd:pl-8 md:even:pr-8 md:odd:mr-[30%] md:even:ml-[30%]">
                       <div className="group">
                         <div
-                          className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer transform hover:-translate-y-1 transition-all duration-300 overflow-hidden border border-gray-100 mx-auto md:mx-0"
+                          className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer transform transition-all duration-300 overflow-hidden border border-gray-100 mx-auto md:mx-0"
                           style={{
                             // width: "clamp(280px, 25vw, 400px)",
                             minWidth: "310px",
@@ -292,7 +292,7 @@ export default function GuestDashboard() {
                           onClick={() => handlePostClick(post)}
                         >
                           {/* Date badge - responsive positioning */}
-                          <div className="absolute top-2 left-10 md:left-[calc(26%+1rem)] bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow z-10 group-hover:opacity-0">
+                          <div className="absolute top-2 left-10 md:left-[calc(26%+1rem)] bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow z-10 group-hover:opacity-100 opacity-80 transition-opacity duration-200">
                             {new Date(post.time).toLocaleDateString("en-US", {
                               month: "short",
                               day: "numeric",
@@ -382,7 +382,7 @@ export default function GuestDashboard() {
 
       {activeTab === 3 && (
         <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Tributes</h2>
+          <h2 className="text-xl font-semibold mb-4">Family Tree</h2>
           <div className="space-y-4">
             {comments.length > 0 ? (
               comments.map((comment) => (
@@ -392,7 +392,7 @@ export default function GuestDashboard() {
               ))
             ) : (
               <p className="text-gray-600">
-                No tributes yet. Share your memories in the posts above.
+                Family tree will be displayed here.
               </p>
             )}
           </div>
