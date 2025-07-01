@@ -9,11 +9,14 @@ interface Post {
   paragraph: string;
   time: string;
   likes: number;
+  has_image?: boolean;
+  image_mime_type?: string;
 }
 
 interface User {
   id: number;
-  icon: string;
+  has_icon?: boolean;
+  icon_mime_type?: string;
   name: string;
   birthday: string;
   dateOfDeath: string;
@@ -22,11 +25,25 @@ interface User {
   intro: string;
 }
 
-export default function AdminDashboard() {
+interface Comment {
+  id: number;
+  post_id: number;
+  content: string;
+}
+
+export default function GuestDashboard() {
   const [userId, setUserId] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState("");
   const [user, setUser] = useState<User | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
   const router = useRouter();
 
   useEffect(() => {
@@ -67,10 +84,14 @@ export default function AdminDashboard() {
         const res = await fetch(`/api/admin/users?user=${parseInt(userId)}`);
         if (!res.ok) throw new Error("Failed to fetch user");
         const data = await res.json();
-        console.log("Fetched user data:", data.user[0][0]);
-        data.user[0][0].birthday = data.user[0][0].birthday.split("T")[0];
-        data.user[0][0].dateOfDeath = data.user[0][0].dateOfDeath.split("T")[0];
-        setUser(data.user[0][0]);
+        const user = data.user;
+        if (user.birthday) {
+          user.birthday = user.birthday.split("T")[0];
+        }
+        if (user.dateOfDeath) {
+          user.dateOfDeath = user.dateOfDeath.split("T")[0];
+        }
+        setUser(user);
       } catch (err: any) {
         setError(err.message || "Unknown error");
       }
@@ -79,16 +100,111 @@ export default function AdminDashboard() {
     if (userId) fetchUser();
   }, [userId]);
 
-  const handleLogout = () => {
-    router.push("/");
+  const getImageUrl = (postId: number, hasImage: boolean) => {
+    return hasImage
+      ? `/api/admin/posts/images?postId=${postId}`
+      : "/placeholder-icon.jpg";
   };
+
+  const getUserIconUrl = (userId: number, hasIcon: boolean) => {
+    return hasIcon
+      ? `/api/admin/users/icon?userId=${userId}`
+      : "/placeholder-icon.jpg";
+  };
+
+  const fetchComments = async (postId: number) => {
+    setIsLoadingComments(true);
+    try {
+      const res = await fetch(`/api/admin/posts/comments?postId=${postId}`);
+      if (!res.ok) throw new Error("Failed to fetch comments");
+      const data = await res.json();
+      setComments(data.comments);
+    } catch (err: any) {
+      console.error("Error fetching comments:", err);
+      setComments([]);
+    } finally {
+      setIsLoadingComments(false);
+    }
+  };
+
+  const submitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPost || !newComment.trim()) return;
+
+    setIsSubmittingComment(true);
+    try {
+      const res = await fetch("/api/admin/posts/comments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          postId: selectedPost.id,
+          content: newComment.trim(),
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to submit comment");
+
+      const data = await res.json();
+      setComments((prev) => [data.comment, ...prev]);
+      setNewComment("");
+    } catch (err: any) {
+      console.error("Error submitting comment:", err);
+      alert("Failed to submit comment. Please try again.");
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const handlePostClick = (post: Post) => {
+    setSelectedPost(post);
+    setIsModalOpen(true);
+    fetchComments(post.id);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedPost(null);
+    setComments([]);
+    setNewComment("");
+  };
+
+  const handleLikePost = async (postId: number) => {
+    try {
+      setSelectedPost((prev) =>
+        prev ? { ...prev, likes: prev.likes + 1 } : prev
+      );
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post.id === postId ? { ...post, likes: post.likes + 1 } : post
+        )
+      );
+
+      await fetch(`/api/admin/posts/likes`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id: postId }),
+      });
+    } catch (err) {
+      console.error("Error updating likes:", err);
+    }
+  };
+
+  const tabs = ["Timeline", "Bio", "Media", "Tributes"];
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       {/* Profile Header */}
       <div className="bg-white max-w-2xl mx-auto p-6 rounded-xl shadow-lg text-center relative">
         <img
-          src={user?.icon || "/placeholder-icon.jpg"}
+          src={
+            user?.has_icon
+              ? getUserIconUrl(user.id, user.has_icon)
+              : "/placeholder-icon.jpg"
+          }
           alt="User Icon"
           className="w-24 h-24 rounded-full mx-auto border-4 border-white shadow-md object-cover"
         />
@@ -97,69 +213,257 @@ export default function AdminDashboard() {
         <p className="text-gray-500">
           {user?.birthday} – {user?.dateOfDeath ? user.dateOfDeath : "Present"}
         </p>
-        <p className="italic text-sm mt-2">{user?.intro}</p>
-
-        {/* Action Buttons */}
+        <p className="italic text-sm mt-2">
+          {user?.gender} | {user?.address}
+        </p>
+        {/* Action Buttons - Guest Version */}
         <div className="flex justify-center gap-4 mt-4">
           <button className="border px-4 py-2 rounded-full text-sm text-yellow-600 border-yellow-500 hover:bg-yellow-100">
             ♡ Favorite
           </button>
-          <button className="border px-4 py-2 rounded-full text-sm text-yellow-600 border-yellow-500 hover:bg-yellow-100">
+          <button
+            className="border px-4 py-2 rounded-full text-sm text-yellow-600 border-yellow-500 hover:bg-yellow-100"
+            onClick={() => {
+              if (user?.id) {
+                const url = `${window.location.origin}/guest?user=${user.id}`;
+                navigator.clipboard.writeText(url).then(() => {
+                  alert("Share link copied to clipboard!");
+                });
+              }
+            }}
+          >
             🔄 Share
-          </button>
-          <button className="border px-4 py-2 rounded-full text-sm text-yellow-600 border-yellow-500 hover:bg-yellow-100">
-            ⋯
           </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="max-w-2xl mx-auto mt-6 border-b flex justify-around text-gray-600 font-medium">
-        {["Timeline", "Bio", "Media", "Tributes"].map((tab) => (
-          <button key={tab} className="py-2 hover:text-black">
-            {tab}
-          </button>
-        ))}
+      <div className="max-w-2xl mx-auto mt-8">
+        <div className="flex justify-between bg-white rounded-xl shadow p-2 mb-2">
+          {tabs.map((tab, idx) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(idx)}
+              className="flex-1 py-2 mx-1 rounded-lg transition-colors duration-150 
+            text-gray-600 font-semibold hover:bg-yellow-100 hover:text-yellow-700 focus:outline-none"
+              style={{
+                borderBottom:
+                  idx === activeTab
+                    ? "3px solid #F59E42"
+                    : "3px solid transparent",
+                background: idx === activeTab ? "#FFF7E6" : "transparent",
+                color: idx === activeTab ? "#F59E42" : undefined,
+              }}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Media Posts */}
-      <div className="max-w-2xl mx-auto mt-6">
-        {/* <h2 className="text-xl font-semibold mb-4">Your Posts</h2> */}
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        {posts.length === 0 ? (
-          <p className="text-gray-500">No posts available.</p>
-        ) : (
+      {/* Timeline Posts - Read Only */}
+      {activeTab === 0 && (
+        <div className="max-w-2xl mx-auto mt-6">
+          {error && <p className="text-red-500 mb-4">{error}</p>}
+          {posts.length === 0 ? (
+            <p className="text-gray-500">No posts available.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {posts.map((post) => (
+                <div
+                  key={post.id}
+                  className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200"
+                  onClick={() => handlePostClick(post)}
+                >
+                  <img
+                    src={getImageUrl(post.id, post.has_image || false)}
+                    alt={post.title}
+                    className="rounded-md h-40 w-full object-cover mb-2"
+                  />
+                  <h3 className="text-md font-semibold">{post.title}</h3>
+                  <p className="text-gray-500 text-sm mb-1">
+                    {new Date(post.time).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm line-clamp-3">{post.paragraph}</p>
+                  <p className="text-blue-500 text-sm mt-2">
+                    ❤️ {post.likes} Likes
+                  </p>
+                  <div className="mt-2 text-xs text-gray-400">
+                    Click to view details
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Content for other tabs */}
+      {activeTab === 1 && (
+        <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Bio</h2>
+          <p className="text-gray-600">{user?.intro}</p>
+        </div>
+      )}
+
+      {activeTab === 2 && (
+        <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Media</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {posts.map((post) => (
-              <div key={post.id} className="bg-white p-4 rounded-lg shadow-md">
-                <img
-                  src="/placeholder-icon.jpg"
-                  alt={post.title}
-                  className="rounded-md h-40 w-full object-cover mb-2"
-                />
-                <h3 className="text-md font-semibold">{post.title}</h3>
-                <p className="text-gray-500 text-sm mb-1">
-                  {new Date(post.time).toLocaleDateString()}
-                </p>
-                <p className="text-sm">{post.paragraph}</p>
-                <p className="text-blue-500 text-sm mt-2">
-                  ❤️ {post.likes} Likes
-                </p>
-              </div>
-            ))}
+            {posts
+              .filter((post) => post.has_image)
+              .map((post) => (
+                <div key={post.id} className="cursor-pointer">
+                  <img
+                    src={getImageUrl(post.id, post.has_image || false)}
+                    alt={post.title}
+                    className="rounded-md h-40 w-full object-cover hover:opacity-90 transition-opacity"
+                    onClick={() => handlePostClick(post)}
+                  />
+                </div>
+              ))}
           </div>
-        )}
-      </div>
+          {posts.filter((post) => post.has_image).length === 0 && (
+            <p className="text-gray-600">No media content available.</p>
+          )}
+        </div>
+      )}
 
-      {/* Logout */}
-      <div className="flex justify-center mt-10">
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600"
-        >
-          Logout
-        </button>
-      </div>
+      {activeTab === 3 && (
+        <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Tributes</h2>
+          <div className="space-y-4">
+            {comments.length > 0 ? (
+              comments.map((comment) => (
+                <div key={comment.id} className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-gray-800">{comment.content}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-600">
+                No tributes yet. Share your memories in the posts above.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Post Detail Modal - Guest Version */}
+      {isModalOpen && selectedPost && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              {/* Modal Header */}
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  {selectedPost.title}
+                </h2>
+                <button
+                  onClick={closeModal}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Post Content */}
+              <div className="space-y-4">
+                <img
+                  src={getImageUrl(
+                    selectedPost.id,
+                    selectedPost.has_image || false
+                  )}
+                  alt={selectedPost.title}
+                  className="w-full h-64 object-cover rounded-lg"
+                />
+
+                <div>
+                  <p className="text-gray-500 text-sm mb-2">
+                    {new Date(selectedPost.time).toLocaleString()}
+                  </p>
+                  <p className="text-gray-900 leading-relaxed">
+                    {selectedPost.paragraph}
+                  </p>
+                </div>
+
+                {/* Like Button */}
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => handleLikePost(selectedPost.id)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
+                      selectedPost.likes > 0
+                        ? "text-pink-500 bg-pink-50 hover:bg-pink-100"
+                        : "text-gray-400 bg-gray-50 hover:bg-gray-100"
+                    }`}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill={selectedPost.likes > 0 ? "currentColor" : "none"}
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z"
+                      />
+                    </svg>
+                    <span>{selectedPost.likes} Likes</span>
+                  </button>
+                </div>
+
+                {/* Comments Section */}
+                <div className="border-t pt-4">
+                  <h3 className="text-lg font-semibold mb-3">Comments</h3>
+
+                  {/* Comments List */}
+                  <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
+                    {isLoadingComments ? (
+                      <div className="text-gray-500 text-sm">
+                        Loading comments...
+                      </div>
+                    ) : comments.length === 0 ? (
+                      <div className="text-gray-500 text-sm">
+                        No comments yet. Be the first to share your thoughts!
+                      </div>
+                    ) : (
+                      comments.map((comment) => (
+                        <div
+                          key={comment.id}
+                          className="bg-gray-50 rounded-lg p-3"
+                        >
+                          <p className="text-gray-800">{comment.content}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Add Comment Form */}
+                  <form onSubmit={submitComment} className="flex gap-2">
+                    <input
+                      type="text"
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      placeholder="Share your thoughts..."
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      disabled={isSubmittingComment}
+                    />
+                    <button
+                      type="submit"
+                      className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      disabled={isSubmittingComment || !newComment.trim()}
+                    >
+                      {isSubmittingComment ? "Posting..." : "Comment"}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

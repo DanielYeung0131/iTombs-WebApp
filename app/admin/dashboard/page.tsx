@@ -369,7 +369,7 @@ export default function AdminDashboard() {
     router.push("/");
   };
 
-  const tabs = ["Timeline", "Bio", "Media", "Tributes"];
+  const tabs = ["Timeline", "Bio", "Media", "Family Tree"];
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
@@ -389,14 +389,26 @@ export default function AdminDashboard() {
         <p className="text-gray-500">
           {user?.birthday} – {user?.dateOfDeath ? user.dateOfDeath : "Present"}
         </p>
-        <p className="italic text-sm mt-2">{user?.intro}</p>
+        <p className="italic text-sm mt-2">
+          {user?.gender} | {user?.address}
+        </p>
 
         {/* Action Buttons */}
         <div className="flex justify-center gap-4 mt-4">
           <button className="border px-4 py-2 rounded-full text-sm text-yellow-600 border-yellow-500 hover:bg-yellow-100">
             ♡ Favorite
           </button>
-          <button className="border px-4 py-2 rounded-full text-sm text-yellow-600 border-yellow-500 hover:bg-yellow-100">
+          <button
+            className="border px-4 py-2 rounded-full text-sm text-yellow-600 border-yellow-500 hover:bg-yellow-100"
+            onClick={() => {
+              if (user?.id) {
+                const url = `https://itombs.vercel.app/guest?user=${user.id}`;
+                navigator.clipboard.writeText(url).then(() => {
+                  alert("Share link copied to clipboard!");
+                });
+              }
+            }}
+          >
             🔄 Share
           </button>
           <button
@@ -405,7 +417,7 @@ export default function AdminDashboard() {
               router.push("/admin/settings" + (userId ? `?user=${userId}` : ""))
             }
           >
-            📝 Edit Profile
+            📝 Settings
           </button>
         </div>
       </div>
@@ -448,34 +460,92 @@ export default function AdminDashboard() {
 
       {/* Media Posts - Only show when Timeline tab is active */}
       {activeTab === 0 && (
-        <div className="max-w-2xl mx-auto mt-6">
+        <div className="max-w-4xl mx-auto mt-6 px-4">
           {error && <p className="text-red-500 mb-4">{error}</p>}
           {posts.length === 0 ? (
-            <p className="text-gray-500">No posts available.</p>
+            <p className="text-gray-500 text-center">No posts available.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {posts.map((post) => (
-                <div
-                  key={post.id}
-                  className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200"
-                  onClick={() => handlePostClick(post)}
-                >
-                  <img
-                    src={getImageUrl(post.id, post.has_image || false)}
-                    alt={post.title}
-                    className="rounded-md h-40 w-full object-cover mb-2"
-                  />
-                  <h3 className="text-md font-semibold">{post.title}</h3>
-                  <p className="text-gray-500 text-sm mb-1">
-                    {new Date(post.time).toLocaleDateString()}
-                  </p>
-                  <p className="text-sm line-clamp-3">{post.paragraph}</p>
-                  <p className="text-blue-500 text-sm mt-2">
-                    ❤️ {post.likes} Likes
-                  </p>
-                  <div className="mt-2 text-xs text-gray-400">
-                    Click to view details
+            <div className="relative">
+              {/* Timeline line */}
+              <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1 bg-gradient-to-b from-blue-400 via-purple-500 to-pink-500"></div>
+
+              {posts.map((post, index) => (
+                <div key={post.id} className="relative mb-12 last:mb-0">
+                  {/* Timeline dot - centered on timeline */}
+                  <div className="absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-4 border-blue-500 rounded-full shadow-lg z-10"></div>
+
+                  {/* Alternating layout for left/right positioning */}
+                  <div
+                    className={`flex ${
+                      index % 2 === 0 ? "justify-start" : "justify-end"
+                    }`}
+                  >
+                    <div
+                      className={`w-1/2 ${index % 2 === 0 ? "pl-13" : "pl-13"}`}
+                    >
+                      <div className="group">
+                        <div
+                          className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer transform hover:-translate-y-1 transition-all duration-300 overflow-hidden border border-gray-100 max-w-xs"
+                          style={{ minWidth: "260px", maxWidth: "320px" }}
+                          onClick={() => handlePostClick(post)}
+                        >
+                          {/* Date badge - positioned based on left/right alignment */}
+                          <div
+                            className={`absolute ${
+                              index % 2 === 0 ? "right-85" : "left-85"
+                            } mt-5 top-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-2 py-0.5 rounded-full text-xs font-semibold shadow`}
+                          >
+                            {new Date(post.time).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </div>
+
+                          {/* Image */}
+                          <div className="relative overflow-hidden">
+                            <img
+                              src={getImageUrl(
+                                post.id,
+                                post.has_image || false
+                              )}
+                              alt={post.title}
+                              className="w-full h-28 object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          </div>
+
+                          {/* Content */}
+                          <div className="p-3">
+                            <h3 className="text-base font-bold text-gray-800 mb-1 group-hover:text-blue-600 transition-colors duration-200 line-clamp-1">
+                              {post.title}
+                            </h3>
+                            <p className="text-gray-600 text-xs leading-relaxed mb-2 line-clamp-2">
+                              {post.paragraph}
+                            </p>
+
+                            {/* Footer */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-1 text-pink-500">
+                                <span className="text-base">❤️</span>
+                                <span className="font-semibold text-sm">
+                                  {post.likes}
+                                </span>
+                                <span className="text-gray-400 text-xs">
+                                  Likes
+                                </span>
+                              </div>
+                              <div className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                View →
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Connecting line to next item - no longer needed as timeline is continuous */}
                 </div>
               ))}
             </div>
@@ -487,23 +557,37 @@ export default function AdminDashboard() {
       {activeTab === 1 && (
         <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Bio</h2>
-          <p className="text-gray-600">Bio content will be displayed here.</p>
+          <p className="text-gray-600">{user?.intro}</p>
         </div>
       )}
 
       {activeTab === 2 && (
         <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Media</h2>
-          <p className="text-gray-600">Media content will be displayed here.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {posts
+              .filter((post) => post.has_image)
+              .map((post) => (
+                <div key={post.id} className="cursor-pointer">
+                  <img
+                    src={getImageUrl(post.id, post.has_image || false)}
+                    alt={post.title}
+                    className="rounded-md h-40 w-full object-cover hover:opacity-90 transition-opacity"
+                    onClick={() => handlePostClick(post)}
+                  />
+                </div>
+              ))}
+          </div>
+          {posts.filter((post) => post.has_image).length === 0 && (
+            <p className="text-gray-600">No media content available.</p>
+          )}
         </div>
       )}
 
       {activeTab === 3 && (
         <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Tributes</h2>
-          <p className="text-gray-600">
-            Tributes content will be displayed here.
-          </p>
+          <h2 className="text-xl font-semibold mb-4">Family Tree</h2>
+          <p className="text-gray-600">Family tree will be displayed here.</p>
         </div>
       )}
 
