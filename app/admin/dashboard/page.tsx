@@ -382,7 +382,7 @@ export default function AdminDashboard() {
               : "/placeholder-icon.jpg"
           }
           alt="User Icon"
-          className="w-24 h-24 rounded-full mx-auto border-4 border-white shadow-md object-cover"
+          className="w-24 h-24 rounded-full mx-auto border-4 border-white shadow-md object-cover transition-transform duration-300 hover:scale-105 hover:shadow-xl"
         />
 
         <h1 className="text-2xl font-bold mt-2">{user?.name}</h1>
