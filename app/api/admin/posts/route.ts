@@ -1,8 +1,6 @@
 // app/api/admin/posts/route.ts
 import { NextResponse, NextRequest } from "next/server";
 import db from "@/lib/db";
-import { writeFile } from "fs/promises";
-import path from "path";
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,50 +17,62 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let imagePath = null;
+    let imageBuffer = null;
+    let imageMimeType = null;
 
     // Handle image upload if provided
     if (image && image.size > 0) {
       const bytes = await image.arrayBuffer();
-      const buffer = Buffer.from(bytes);
+      imageBuffer = Buffer.from(bytes);
+      imageMimeType = image.type;
 
-      // Generate unique filename
-      const timestamp = Date.now();
-      const fileExtension = path.extname(image.name);
-      const fileName = `post_${timestamp}_${Math.random()
-        .toString(36)
-        .substring(2, 15)}${fileExtension}`;
-
-      // Create uploads directory path
-      const uploadDir = path.join(process.cwd(), "public", "uploads", "posts");
-      const filePath = path.join(uploadDir, fileName);
-
-      // Ensure upload directory exists
-      const fs = require("fs");
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+      // Optional: Validate image type
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!allowedTypes.includes(imageMimeType)) {
+        return NextResponse.json(
+          {
+            error:
+              "Invalid image type. Only JPEG, PNG, GIF, and WebP are allowed",
+          },
+          { status: 400 }
+        );
       }
 
-      // Save file
-      await writeFile(filePath, buffer);
-      imagePath = `/uploads/posts/${fileName}`;
+      // Optional: Check file size (e.g., max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (imageBuffer.length > maxSize) {
+        return NextResponse.json(
+          { error: "Image size too large. Maximum 5MB allowed" },
+          { status: 400 }
+        );
+      }
     }
 
     // Insert the post into database
     const [result] = await db.execute(
-      "INSERT INTO Post (user_id, title, paragraph, image, time, likes) VALUES (?, ?, ?, ?, NOW(), 0)",
-      [parseInt(userId), title, paragraph, imagePath]
+      "INSERT INTO Post (user_id, title, paragraph, image_blob, image_mime_type, time, likes) VALUES (?, ?, ?, ?, ?, NOW(), 0)",
+      [parseInt(userId), title, paragraph, imageBuffer, imageMimeType]
     );
 
-    // Get the created post
+    // Get the created post (without the blob data for response)
     const insertId = (result as any).insertId;
-    const [createdPost] = await db.execute("SELECT * FROM Post WHERE id = ?", [
-      insertId,
-    ]);
+    const [createdPost] = await db.execute(
+      "SELECT id, user_id, title, paragraph, image_mime_type, time, likes FROM Post WHERE id = ?",
+      [insertId]
+    );
+
+    const post = (createdPost as any[])[0];
+    // Add a flag to indicate if image exists
+    post.has_image = !!post.image_mime_type;
 
     return NextResponse.json({
       message: "Post created successfully",
-      post: (createdPost as any[])[0],
+      post: post,
     });
   } catch (error) {
     console.error("Database error:", error);
@@ -89,60 +99,48 @@ export async function PUT(request: NextRequest) {
     }
 
     const postId = parseInt(id);
-    let imagePath = null;
+    let imageBuffer = null;
+    let imageMimeType = null;
 
     // Handle image upload if provided
     if (image && image.size > 0) {
       const bytes = await image.arrayBuffer();
-      const buffer = Buffer.from(bytes);
+      imageBuffer = Buffer.from(bytes);
+      imageMimeType = image.type;
 
-      // Generate unique filename
-      const timestamp = Date.now();
-      const fileExtension = path.extname(image.name);
-      const fileName = `post_${timestamp}_${Math.random()
-        .toString(36)
-        .substring(2, 15)}${fileExtension}`;
-
-      // Create uploads directory path
-      const uploadDir = path.join(process.cwd(), "public", "uploads", "posts");
-      const filePath = path.join(uploadDir, fileName);
-
-      // Ensure upload directory exists
-      const fs = require("fs");
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+      // Optional: Validate image type
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!allowedTypes.includes(imageMimeType)) {
+        return NextResponse.json(
+          {
+            error:
+              "Invalid image type. Only JPEG, PNG, GIF, and WebP are allowed",
+          },
+          { status: 400 }
+        );
       }
 
-      // Save file
-      await writeFile(filePath, buffer);
-      imagePath = `/uploads/posts/${fileName}`;
-
-      // Optional: Delete old image file
-      // You might want to implement this to clean up old files
-      try {
-        const [oldPost] = await db.execute(
-          "SELECT image FROM Post WHERE id = ?",
-          [postId]
+      // Optional: Check file size (e.g., max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (imageBuffer.length > maxSize) {
+        return NextResponse.json(
+          { error: "Image size too large. Maximum 5MB allowed" },
+          { status: 400 }
         );
-        const oldImagePath = (oldPost as any[])[0]?.image;
-        if (oldImagePath && oldImagePath.startsWith("/uploads/")) {
-          const oldFilePath = path.join(process.cwd(), "public", oldImagePath);
-          const fs = require("fs");
-          if (fs.existsSync(oldFilePath)) {
-            fs.unlinkSync(oldFilePath);
-          }
-        }
-      } catch (cleanupError) {
-        console.warn("Failed to cleanup old image:", cleanupError);
       }
     }
 
     let result;
     // Update the post - only update image if new one provided
-    if (imagePath) {
+    if (imageBuffer) {
       [result] = await db.execute(
-        "UPDATE Post SET title = ?, paragraph = ?, image = ? WHERE id = ?",
-        [title, paragraph, imagePath, postId]
+        "UPDATE Post SET title = ?, paragraph = ?, image_blob = ?, image_mime_type = ? WHERE id = ?",
+        [title, paragraph, imageBuffer, imageMimeType, postId]
       );
     } else {
       [result] = await db.execute(
@@ -159,14 +157,19 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Get the updated post
-    const [updatedPost] = await db.execute("SELECT * FROM Post WHERE id = ?", [
-      postId,
-    ]);
+    // Get the updated post (without the blob data for response)
+    const [updatedPost] = await db.execute(
+      "SELECT id, user_id, title, paragraph, image_mime_type, time, likes FROM Post WHERE id = ?",
+      [postId]
+    );
+
+    const post = (updatedPost as any[])[0];
+    // Add a flag to indicate if image exists
+    post.has_image = !!post.image_mime_type;
 
     return NextResponse.json({
       message: "Post updated successfully",
-      post: (updatedPost as any[])[0],
+      post: post,
     });
   } catch (error) {
     console.error("Database error:", error);
@@ -182,19 +185,12 @@ export async function DELETE(request: NextRequest) {
     const body = await request.json();
     const { postId } = body;
 
-    // Get the post to find the image path before deleting
-    const [post] = await db.execute("SELECT image FROM Post WHERE id = ?", [
-      parseInt(postId),
-    ]);
-
-    const imagePath = (post as any[])[0]?.image;
-
     // First, delete associated comments
     await db.execute("DELETE FROM Comment WHERE post_id = ?", [
       parseInt(postId),
     ]);
 
-    // Then delete the post
+    // Then delete the post (image will be automatically deleted with the row)
     const [result] = await db.execute("DELETE FROM Post WHERE id = ?", [
       parseInt(postId),
     ]);
@@ -202,19 +198,6 @@ export async function DELETE(request: NextRequest) {
     // Check if any rows were affected
     if ((result as any).affectedRows === 0) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
-    }
-
-    // Delete the image file if it exists
-    if (imagePath && imagePath.startsWith("/uploads/")) {
-      try {
-        const filePath = path.join(process.cwd(), "public", imagePath);
-        const fs = require("fs");
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      } catch (cleanupError) {
-        console.warn("Failed to cleanup image file:", cleanupError);
-      }
     }
 
     return NextResponse.json({
@@ -235,11 +218,17 @@ export async function GET(req: Request) {
     const userId = new URL(req.url).searchParams.get("user");
 
     const [rows] = await db.execute(
-      "SELECT id, title, paragraph, time, likes, image FROM Post WHERE user_id = ? ORDER BY time DESC",
+      "SELECT id, title, paragraph, time, likes, image_mime_type FROM Post WHERE user_id = ? ORDER BY time DESC",
       [userId]
     );
 
-    return NextResponse.json({ posts: rows });
+    // Add has_image flag to each post
+    const posts = (rows as any[]).map((post) => ({
+      ...post,
+      has_image: !!post.image_mime_type,
+    }));
+
+    return NextResponse.json({ posts: posts });
   } catch (error) {
     console.error("Failed to fetch posts:", error);
     return NextResponse.json(

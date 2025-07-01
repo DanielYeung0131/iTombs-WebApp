@@ -9,7 +9,8 @@ interface Post {
   paragraph: string;
   time: string;
   likes: number;
-  image?: string; // Add this line
+  has_image?: boolean; // Changed from image?: string
+  image_mime_type?: string;
 }
 
 interface User {
@@ -107,6 +108,12 @@ export default function AdminDashboard() {
 
     if (userId) fetchUser();
   }, [userId]);
+
+  const getImageUrl = (postId: number, hasImage: boolean) => {
+    return hasImage
+      ? `/api/admin/posts/images?postId=${postId}`
+      : "/placeholder-icon.jpg";
+  };
 
   const handleImageUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -229,7 +236,7 @@ export default function AdminDashboard() {
   const handleEditPost = () => {
     if (selectedPost) {
       setEditedPost({ ...selectedPost });
-      setEditedPostImagePreview(selectedPost.image || "");
+      setEditedPostImagePreview("");
       setIsEditMode(true);
     }
   };
@@ -254,7 +261,7 @@ export default function AdminDashboard() {
 
       const res = await fetch(`/api/admin/posts`, {
         method: "PUT",
-        body: formData, // Changed from JSON to FormData
+        body: formData,
       });
 
       if (!res.ok) throw new Error("Failed to update post");
@@ -268,8 +275,8 @@ export default function AdminDashboard() {
         )
       );
 
-      // Update the selected post
-      setSelectedPost({ ...selectedPost!, ...data.post });
+      // Update the selected post with the new data
+      setSelectedPost((prev) => (prev ? { ...prev, ...data.post } : prev));
 
       setIsEditMode(false);
       setEditedPost(null);
@@ -433,7 +440,7 @@ export default function AdminDashboard() {
                   onClick={() => handlePostClick(post)}
                 >
                   <img
-                    src={post.image || "/placeholder-icon.jpg"}
+                    src={getImageUrl(post.id, post.has_image || false)}
                     alt={post.title}
                     className="rounded-md h-40 w-full object-cover mb-2"
                   />
@@ -620,13 +627,15 @@ export default function AdminDashboard() {
                       onChange={(e) => handleImageUpload(e, true)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 mb-2"
                     />
-                    {(editedPostImagePreview || selectedPost.image) && (
+                    {(editedPostImagePreview || selectedPost.has_image) && (
                       <div className="relative">
                         <img
                           src={
                             editedPostImagePreview ||
-                            selectedPost.image ||
-                            "/placeholder-icon.jpg"
+                            getImageUrl(
+                              selectedPost.id,
+                              selectedPost.has_image || false
+                            )
                           }
                           alt={selectedPost.title}
                           className="w-full h-64 object-cover rounded-lg"
@@ -643,12 +652,14 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <img
-                    src={selectedPost.image || "/placeholder-icon.jpg"}
+                    src={getImageUrl(
+                      selectedPost.id,
+                      selectedPost.has_image || false
+                    )}
                     alt={selectedPost.title}
                     className="w-full h-64 object-cover rounded-lg"
                   />
                 )}
-
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
