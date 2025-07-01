@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { User, X, ArrowLeft, Plus, Trash2 } from "lucide-react";
-import { useParams } from "next/navigation";
 
 interface TreeNode {
   tree_id: number;
@@ -67,7 +66,7 @@ export default function FamilyTreeVisualization() {
       typeof window !== "undefined"
         ? window.innerWidth + (window.innerWidth < 700 ? 100 : 0)
         : 800, // Initialize with window.innerWidth if available, otherwise a default
-    height: typeof window !== "undefined" ? window.innerHeight - 400 : 450, // Initialize with window.innerHeight if available, otherwise a default
+    height: typeof window !== "undefined" ? window.innerHeight - 300 : 400, // Initialize with window.innerHeight if available, otherwise a default
   });
 
   const windowWidth = typeof window !== "undefined" ? window.innerWidth : 1024;
@@ -88,8 +87,8 @@ export default function FamilyTreeVisualization() {
 
         setIsMobile(isMobileView);
 
-        const width = Math.min(containerWidth - 32, isMobileView ? 350 : 800);
-        const height = isMobileView ? 400 : 600;
+        const width = Math.min(containerWidth - 32, isMobileView ? 400 : 800);
+        const height = isMobileView ? 500 : 600;
 
         setSvgDimensions({ width, height });
       }
@@ -136,8 +135,8 @@ export default function FamilyTreeVisualization() {
     const nodes: GraphNode[] = [];
     const edges: GraphEdge[] = [];
 
-    const centerX = (svgDimensions.width - (isMobile ? 100 : 200)) / 2;
-    const centerY = svgDimensions.height / 2 + (isMobile ? 40 : 100);
+    const centerX = (svgDimensions.width - (isMobile ? 100 : 50)) / 2;
+    const centerY = svgDimensions.height / 2;
     const baseRadius = isMobile ? 80 : 150;
 
     // Always create root node
@@ -163,8 +162,8 @@ export default function FamilyTreeVisualization() {
       parent: { angle: -90, distance: isMobile ? 120 : 220 },
       child: { angle: 90, distance: isMobile ? 120 : 220 },
       sibling: { angle: 180, distance: isMobile ? 100 : 180 },
-      grandparent: { angle: -125, distance: isMobile ? 210 : 320 },
-      grandchild: { angle: 90, distance: isMobile ? 210 : 320 },
+      grandparent: { angle: -125, distance: isMobile ? 190 : 280 },
+      grandchild: { angle: 90, distance: isMobile ? 190 : 280 },
       aunt: { angle: -135, distance: isMobile ? 130 : 240 },
       uncle: { angle: -45, distance: isMobile ? 130 : 240 },
       cousin: { angle: 135, distance: isMobile ? 130 : 240 },

@@ -1,779 +1,501 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { User, X, ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
-interface TreeNode {
-  tree_id: number;
-  user_id: number;
-  relative_name: string;
-  relationship: string;
-  profile_url?: string;
+interface Post {
+  id: number;
+  title: string;
+  paragraph: string;
+  time: string;
+  likes: number;
+  has_image?: boolean;
+  image_mime_type?: string;
 }
 
-interface NewRelative {
-  relativeName: string;
-  relationship: string;
-  profileUrl: string;
-}
-
-interface GraphNode {
-  id: string;
+interface User {
+  id: number;
+  has_icon?: boolean;
+  icon_mime_type?: string;
   name: string;
-  x: number;
-  y: number;
-  data: TreeNode | null; // null for root node when no data exists
-  isRoot?: boolean;
+  birthday: string;
+  dateOfDeath: string;
+  gender: string;
+  address: string;
+  intro: string;
+  has_background?: boolean;
+  background_mime_type?: string;
 }
 
-interface GraphEdge {
-  from: string;
-  to: string;
-  relationship: string;
+interface Comment {
+  id: number;
+  post_id: number;
+  content: string;
 }
 
-export default function FamilyTreeVisualization() {
-  // Get userId from URL params (you can modify this based on your routing setup)
-  // Get userId from the route (e.g., /admin/tree/[userId])
+export default function GuestProfile() {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [error, setError] = useState("");
+  const [user, setUser] = useState<User | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
 
-  const [userId, setUserId] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
-      setUserId(searchParams.get("userid") || "");
+      setUserId(searchParams.get("user"));
     }
   }, []);
 
-  const [userName] = useState("You"); // You can modify this to get actual user name
-
-  const [treeData, setTreeData] = useState<TreeNode[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
-  const [newRelative, setNewRelative] = useState<NewRelative>({
-    relativeName: "",
-    relationship: "",
-    profileUrl: "",
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [draggedNode, setDraggedNode] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-
-  const [svgDimensions, setSvgDimensions] = useState({
-    width:
-      typeof window !== "undefined"
-        ? window.innerWidth + (window.innerWidth < 700 ? 100 : 0)
-        : 800, // Initialize with window.innerWidth if available, otherwise a default
-    height: typeof window !== "undefined" ? window.innerHeight - 350 : 400, // Initialize with window.innerHeight if available, otherwise a default
-  });
-
-  const windowWidth = typeof window !== "undefined" ? window.innerWidth : 1024;
-  const isMobileView = windowWidth < 768;
-  const [isMobile, setIsMobile] = useState(isMobileView);
-
-  const svgRef = useRef<SVGSVGElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Handle responsive dimensions and mobile detection
   useEffect(() => {
-    const updateDimensions = () => {
-      if (containerRef.current) {
-        const containerWidth = containerRef.current.offsetWidth;
-        const windowWidth =
-          typeof window !== "undefined" ? window.innerWidth : 1024;
-        const isMobileView = windowWidth < 768;
+    const fetchPosts = async () => {
+      if (!userId) {
+        setError("User ID is required");
+        return;
+      }
 
-        setIsMobile(isMobileView);
-
-        const width = Math.min(containerWidth - 32, isMobileView ? 350 : 800);
-        const height = isMobileView ? 400 : 600;
-
-        setSvgDimensions({ width, height });
+      try {
+        const res = await fetch(`/api/admin/posts?user=${parseInt(userId)}`);
+        if (!res.ok) throw new Error("Failed to fetch posts");
+        const data = await res.json();
+        setPosts(data.posts);
+      } catch (err: any) {
+        setError(err.message || "Unknown error");
       }
     };
 
-    updateDimensions();
-    if (typeof window !== "undefined") {
-      window.addEventListener("resize", updateDimensions);
-      return () => window.removeEventListener("resize", updateDimensions);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (userId) {
-      fetchTreeData();
-    }
+    if (userId) fetchPosts();
   }, [userId]);
 
-  const fetchTreeData = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/tree?userId=${userId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setTreeData(data);
-      } else {
-        console.error("Failed to fetch tree data");
-        // Fallback to empty array if API fails
-        setTreeData([]);
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!userId) {
+        setError("User ID is required");
+        return;
       }
-    } catch (error) {
-      console.error("Error fetching tree data:", error);
-      // Fallback to empty array if API fails
-      setTreeData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  // Generate graph layout - always includes root node
-  const generateLayout = (
-    data: TreeNode[]
-  ): { nodes: GraphNode[]; edges: GraphEdge[] } => {
-    const nodes: GraphNode[] = [];
-    const edges: GraphEdge[] = [];
-
-    const centerX = (svgDimensions.width - (isMobile ? 100 : 200)) / 2;
-    const centerY = svgDimensions.height / 2 + (isMobile ? 40 : 100);
-    const baseRadius = isMobile ? 80 : 150;
-
-    // Always create root node
-    const rootNode = data.find((n) => n.relationship === "self");
-    const rootNodeData: GraphNode = {
-      id: "root-node",
-      name: rootNode ? rootNode.relative_name : userName,
-      x: centerX,
-      y: centerY,
-      data: rootNode || null,
-      isRoot: true,
-    };
-    nodes.push(rootNodeData);
-
-    // If no data, return just the root node
-    if (data.length === 0) {
-      return { nodes, edges };
-    }
-
-    // Position other nodes in layers around the root
-    const relationshipLayers = {
-      spouse: { angle: 0, distance: isMobile ? 120 : 160 },
-      parent: { angle: -90, distance: isMobile ? 120 : 220 },
-      child: { angle: 90, distance: isMobile ? 120 : 220 },
-      sibling: { angle: 180, distance: isMobile ? 100 : 180 },
-      grandparent: { angle: -125, distance: isMobile ? 190 : 280 },
-      grandchild: { angle: 90, distance: isMobile ? 190 : 280 },
-      aunt: { angle: -135, distance: isMobile ? 130 : 240 },
-      uncle: { angle: -45, distance: isMobile ? 130 : 240 },
-      cousin: { angle: 135, distance: isMobile ? 130 : 240 },
-      nephew: { angle: 45, distance: isMobile ? 130 : 240 },
-      niece: { angle: 45, distance: isMobile ? 140 : 260 },
+      try {
+        const res = await fetch(`/api/admin/users?user=${parseInt(userId)}`);
+        if (!res.ok) throw new Error("Failed to fetch user");
+        const data = await res.json();
+        console.log("Fetched user data:", data.user);
+        const user = data.user;
+        if (user.birthday) {
+          user.birthday = user.birthday.split("T")[0];
+        }
+        if (user.dateOfDeath) {
+          user.dateOfDeath = user.dateOfDeath.split("T")[0];
+        }
+        setUser(user);
+      } catch (err: any) {
+        setError(err.message || "Unknown error");
+      }
     };
 
-    const relationshipCounts: Record<string, number> = {};
+    if (userId) fetchUser();
+  }, [userId]);
 
-    data.forEach((relative) => {
-      // Skip the root node if it exists in data
-      if (relative.relationship === "self") return;
-
-      const relationship = relative.relationship.toLowerCase();
-      relationshipCounts[relationship] =
-        (relationshipCounts[relationship] || 0) + 1;
-      const index = relationshipCounts[relationship] - 1;
-
-      const config = relationshipLayers[
-        relationship as keyof typeof relationshipLayers
-      ] || { angle: Math.random() * 360, distance: isMobile ? 100 : 200 };
-
-      // Enhanced spacing for parents - more angle difference for two parents
-      let angleOffset;
-      if (relationship === "parent" && relationshipCounts[relationship] === 2) {
-        // For two parents, spread them wider apart
-        angleOffset = index * (isMobile ? 50 : 60) - (isMobile ? 25 : 30);
-      } else {
-        // Standard spacing for other relationships
-        angleOffset =
-          index * (isMobile ? 20 : 30) -
-          (relationshipCounts[relationship] - 1) * (isMobile ? 10 : 15);
-      }
-
-      const finalAngle = (config.angle + angleOffset) * (Math.PI / 180);
-
-      const x = centerX + Math.cos(finalAngle) * config.distance;
-      const y = centerY + Math.sin(finalAngle) * config.distance;
-
-      // Ensure nodes stay within bounds
-      const nodeRadius = isMobile ? 20 : 30;
-      const clampedX = Math.max(
-        nodeRadius,
-        Math.min(svgDimensions.width - nodeRadius, x)
-      );
-      const clampedY = Math.max(
-        nodeRadius,
-        Math.min(svgDimensions.height - nodeRadius, y)
-      );
-
-      const nodeId = `node-${relative.tree_id}`;
-      nodes.push({
-        id: nodeId,
-        name: relative.relative_name,
-        x: clampedX,
-        y: clampedY,
-        data: relative,
-      });
-
-      // Create edge from root to this node
-      edges.push({
-        from: "root-node",
-        to: nodeId,
-        relationship: relative.relationship,
-      });
-    });
-
-    return { nodes, edges };
+  const getImageUrl = (postId: number, hasImage: boolean) => {
+    return hasImage
+      ? `/api/admin/posts/images?postId=${postId}`
+      : "/placeholder-icon.jpg";
   };
 
-  const { nodes, edges } = generateLayout(treeData);
-
-  const handleNodeClick = (node: GraphNode) => {
-    // Don't allow clicking on root node if it has no data
-    if (node.isRoot && !node.data) return;
-    setSelectedNode(node);
+  const getUserIconUrl = (userId: number, hasIcon: boolean) => {
+    return hasIcon
+      ? `/api/admin/users/icon?userId=${userId}`
+      : "/placeholder-icon.jpg";
   };
 
-  const handleMouseDown = (e: React.MouseEvent, nodeId: string) => {
-    if (e.button === 0) {
-      // Left click
-      const rect = svgRef.current?.getBoundingClientRect();
-      if (rect) {
-        const node = nodes.find((n) => n.id === nodeId);
-        if (node) {
-          setDraggedNode(nodeId);
-          setDragOffset({
-            x: e.clientX - rect.left - node.x,
-            y: e.clientY - rect.top - node.y,
-          });
-        }
-      }
-    }
+  const getUserBackgroundUrl = (userId: number, hasBackground: boolean) => {
+    return hasBackground
+      ? `/api/admin/users/background?userId=${userId}`
+      : null;
   };
 
-  const handleTouchStart = (e: React.TouchEvent, nodeId: string) => {
-    const touch = e.touches[0];
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (rect && touch) {
-      const node = nodes.find((n) => n.id === nodeId);
-      if (node) {
-        setDraggedNode(nodeId);
-        setDragOffset({
-          x: touch.clientX - rect.left - node.x,
-          y: touch.clientY - rect.top - node.y,
-        });
-      }
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (draggedNode) {
-      const rect = svgRef.current?.getBoundingClientRect();
-      if (rect) {
-        const nodeIndex = nodes.findIndex((n) => n.id === draggedNode);
-        if (nodeIndex !== -1) {
-          const newX = e.clientX - rect.left - dragOffset.x;
-          const newY = e.clientY - rect.top - dragOffset.y;
-
-          const nodeRadius = nodes[nodeIndex].isRoot ? 35 : 30;
-          nodes[nodeIndex].x = Math.max(
-            nodeRadius,
-            Math.min(svgDimensions.width - nodeRadius, newX)
-          );
-          nodes[nodeIndex].y = Math.max(
-            nodeRadius,
-            Math.min(svgDimensions.height - nodeRadius, newY)
-          );
-        }
-      }
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (draggedNode) {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const rect = svgRef.current?.getBoundingClientRect();
-      if (rect && touch) {
-        const nodeIndex = nodes.findIndex((n) => n.id === draggedNode);
-        if (nodeIndex !== -1) {
-          const newX = touch.clientX - rect.left - dragOffset.x;
-          const newY = touch.clientY - rect.top - dragOffset.y;
-
-          const nodeRadius = nodes[nodeIndex].isRoot ? 35 : 30;
-          nodes[nodeIndex].x = Math.max(
-            nodeRadius,
-            Math.min(svgDimensions.width - nodeRadius, newX)
-          );
-          nodes[nodeIndex].y = Math.max(
-            nodeRadius,
-            Math.min(svgDimensions.height - nodeRadius, newY)
-          );
-        }
-      }
-    }
-  };
-
-  const handleMouseUp = () => {
-    setDraggedNode(null);
-  };
-
-  const handleTouchEnd = () => {
-    setDraggedNode(null);
-  };
-
-  const addRelative = async () => {
-    if (!newRelative.relativeName || !newRelative.relationship) return;
-
+  const fetchComments = async (postId: number) => {
+    setIsLoadingComments(true);
     try {
-      setSubmitting(true);
-      const response = await fetch("/api/tree", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: parseInt(userId),
-          relativeName: newRelative.relativeName,
-          relationship: newRelative.relationship,
-          profileUrl: newRelative.profileUrl || null,
-        }),
-      });
-
-      if (response.ok) {
-        setNewRelative({ relativeName: "", relationship: "", profileUrl: "" });
-        setShowAddForm(false);
-        fetchTreeData(); // Refresh the tree data
-      } else {
-        console.error("Failed to add relative");
-      }
-    } catch (error) {
-      console.error("Error adding relative:", error);
+      const res = await fetch(`/api/admin/posts/comments?postId=${postId}`);
+      if (!res.ok) throw new Error("Failed to fetch comments");
+      const data = await res.json();
+      setComments(data.comments);
+    } catch (err: any) {
+      console.error("Error fetching comments:", err);
+      setComments([]);
     } finally {
-      setSubmitting(false);
+      setIsLoadingComments(false);
     }
   };
 
-  const deleteRelative = async (treeId: number) => {
-    if (!confirm("Are you sure you want to delete this relative?")) return;
-
-    try {
-      const response = await fetch(`/api/tree?treeId=${treeId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        fetchTreeData(); // Refresh the tree data
-        setSelectedNode(null); // Close the modal
-      } else {
-        console.error("Failed to delete relative");
-      }
-    } catch (error) {
-      console.error("Error deleting relative:", error);
-    }
+  const handlePostClick = (post: Post) => {
+    setSelectedPost(post);
+    setIsModalOpen(true);
+    fetchComments(post.id);
   };
 
-  const handleBackToDashboard = () => {
-    if (typeof window !== "undefined") {
-      window.location.href = `/guest?user=${userId}`;
-    }
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedPost(null);
+    setComments([]);
   };
+
+  const tabs = ["Timeline", "Bio", "Media", "Family Tree"];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8">
-        {/* Enhanced Header */}
-        <div className="flex flex-row items-center justify-between mb-6 sm:mb-10 gap-2 flex-wrap">
-          {/* Left: Back Button */}
-          <button
-            onClick={handleBackToDashboard}
-            className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold rounded-full shadow hover:from-blue-600 hover:to-blue-800 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm sm:text-base"
-          >
-            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span>Back</span>
+    <div className="min-h-screen bg-gray-100 p-4">
+      {/* Profile Header */}
+      <div
+        className="max-w-2xl mx-auto p-6 rounded-xl shadow-lg text-center relative overflow-hidden"
+        style={
+          user?.has_background
+            ? {
+                backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url(${getUserBackgroundUrl(
+                  user.id,
+                  user.has_background
+                )})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+              }
+            : { background: "white" }
+        }
+      >
+        <img
+          src={
+            user?.has_icon
+              ? getUserIconUrl(user.id, user.has_icon)
+              : "/placeholder-icon.jpg"
+          }
+          alt="User Icon"
+          className="w-24 h-24 rounded-full mx-auto border-4 border-white shadow-md object-cover transition-transform duration-300 hover:scale-105 hover:shadow-xl"
+        />
+
+        <h1 className="text-2xl font-bold mt-2">{user?.name}</h1>
+        <p className="text-gray-500">
+          {user?.birthday} – {user?.dateOfDeath ? user.dateOfDeath : "Present"}
+        </p>
+        <p className="italic text-sm mt-2">
+          {user?.gender} | {user?.address}
+        </p>
+
+        {/* Action Buttons - Guest version with limited actions */}
+        <div className="flex justify-center gap-4 mt-4">
+          <button className="border px-4 py-2 rounded-full text-sm text-yellow-600 border-yellow-500 hover:bg-yellow-100">
+            ♡ Favorite
           </button>
-
-          {/* Center: Title & Subtitle */}
-          <div className="flex flex-col items-center flex-1 min-w-[180px]">
-            <h1 className="text-3xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-green-500 to-blue-700 text-center w-full tracking-tight drop-shadow-lg">
-              <span className="inline-block align-middle mr-2">
-                <User className="inline w-8 h-8 sm:w-10 sm:h-10 text-blue-500" />
-              </span>
-              Family Tree <span className="text-blue-600">Builder</span>
-            </h1>
-            <span className="text-sm sm:text-base text-gray-500 mt-2 text-center block">
-              Visualize and manage your family connections
-            </span>
-            {/* <span className="text-sm sm:text-base text-gray-500 mt-1 text-center">
-              Visualize and manage your family connections
-            </span> */}
-          </div>
-        </div>
-
-        <div className="flex justify-center mb-8">
           <button
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center space-x-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-green-400 via-blue-500 to-blue-700 text-white font-semibold rounded-full shadow-lg hover:from-green-500 hover:via-blue-600 hover:to-blue-800 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm sm:text-base"
+            className="border px-4 py-2 rounded-full text-sm text-yellow-600 border-yellow-500 hover:bg-yellow-100"
+            onClick={() => {
+              if (user?.id) {
+                const url = `${window.location.origin}/guest?user=${user.id}`;
+                navigator.clipboard.writeText(url).then(() => {
+                  alert("Share link copied to clipboard!");
+                });
+              }
+            }}
           >
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="tracking-wide">Add Relative</span>
+            🔄 Share
           </button>
         </div>
+      </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
-        )}
+      {/* Tabs */}
+      <div className="max-w-2xl mx-auto mt-8">
+        <div className="flex justify-between bg-white rounded-xl shadow p-2 mb-2">
+          {tabs.map((tab, idx) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(idx)}
+              className="flex-1 py-2 mx-1 rounded-lg transition-colors duration-150 
+            text-gray-600 font-semibold hover:bg-yellow-100 hover:text-yellow-700 focus:outline-none"
+              style={{
+                borderBottom:
+                  idx === activeTab
+                    ? "3px solid #F59E42"
+                    : "3px solid transparent",
+                background: idx === activeTab ? "#FFF7E6" : "transparent",
+                color: idx === activeTab ? "#F59E42" : undefined,
+              }}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        {/* Family Tree Visualization - Always shows root node */}
-        {!loading && (
-          <div
-            className="bg-white rounded-lg shadow-lg p-2 sm:p-6 h-[600px] overflow-y-auto"
-            ref={containerRef}
-          >
-            {treeData.length === 0 && (
-              <div className="text-center mb-4 sm:mb-6 p-3 sm:p-4 bg-blue-50 rounded-lg">
-                <p className="text-blue-800 font-medium text-sm sm:text-base">
-                  Start building your family tree by adding relatives!
-                </p>
-                <p className="text-blue-600 text-xs sm:text-sm mt-1">
-                  Click "Add" to connect family members to your tree.
-                </p>
-              </div>
-            )}
+      {/* Media Posts - Only show when Timeline tab is active */}
+      {activeTab === 0 && (
+        <div className="max-w-4xl mx-auto mt-6 px-4">
+          {error && <p className="text-red-500 mb-4">{error}</p>}
+          {posts.length === 0 ? (
+            <p className="text-gray-500 text-center">No posts available.</p>
+          ) : (
+            <div className="relative">
+              {/* Timeline line - positioned more left of center */}
+              <div className="absolute inset-y-0 left-6 md:left-[26%] w-1 bg-gradient-to-b from-blue-400 via-purple-500 to-pink-500"></div>
 
-            <div className="relative flex justify-center">
-              <svg
-                ref={svgRef}
-                width={svgDimensions.width}
-                height={svgDimensions.height}
-                className="rounded-lg touch-none"
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                style={{ maxWidth: "100%" }}
-              >
-                {/* Edges */}
-                {edges.map((edge, index) => {
-                  const fromNode = nodes.find((n) => n.id === edge.from);
-                  const toNode = nodes.find((n) => n.id === edge.to);
-                  if (!fromNode || !toNode) return null;
+              {posts.map((post) => (
+                <div key={post.id} className="relative mb-12 last:mb-0">
+                  {/* Timeline dot - positioned to match the line */}
+                  <div className="absolute left-6 md:left-[26.25%] -translate-x-1/2 w-4 h-4 bg-white border-4 border-blue-500 rounded-full shadow-lg z-10"></div>
 
-                  const midX = (fromNode.x + toNode.x) / 2;
-                  const midY = (fromNode.y + toNode.y) / 2;
-                  const labelWidth = isMobile ? 50 : 60;
-                  const labelHeight = isMobile ? 16 : 20;
-
-                  return (
-                    <g key={index}>
-                      <line
-                        x1={fromNode.x}
-                        y1={fromNode.y}
-                        x2={toNode.x}
-                        y2={toNode.y}
-                        stroke="#94A3B8"
-                        strokeWidth="2"
-                        className="transition-colors"
-                      />
-                      <rect
-                        x={midX - labelWidth / 2}
-                        y={midY - labelHeight / 2}
-                        width={labelWidth}
-                        height={labelHeight}
-                        fill="white"
-                        stroke="#E2E8F0"
-                        rx="4"
-                      />
-                      <text
-                        x={midX}
-                        y={midY + (isMobile ? 2 : 4)}
-                        textAnchor="middle"
-                        className={`${
-                          isMobile ? "text-xs" : "text-xs"
-                        } fill-gray-600 font-medium`}
-                      >
-                        {edge.relationship}
-                      </text>
-                    </g>
-                  );
-                })}
-
-                {/* Nodes */}
-                {nodes.map((node) => {
-                  const nodeRadius = node.isRoot
-                    ? isMobile
-                      ? 30
-                      : 35
-                    : isMobile
-                    ? 25
-                    : 30;
-                  const iconSize = node.isRoot
-                    ? isMobile
-                      ? 18
-                      : 24
-                    : isMobile
-                    ? 15
-                    : 20;
-                  const isHovered = hoveredNode === node.id;
-
-                  return (
-                    <g
-                      key={node.id}
-                      className={
-                        node.isRoot && !node.data
-                          ? "cursor-default"
-                          : "cursor-pointer"
-                      }
-                    >
-                      <circle
-                        cx={node.x}
-                        cy={node.y}
-                        r={nodeRadius}
-                        fill={node.isRoot ? "#3B82F6" : "#10B981"}
-                        stroke="white"
-                        strokeWidth="3"
-                        className={`transition-all duration-200 ${
-                          isHovered ? "shadow-lg filter drop-shadow-lg" : ""
-                        }`}
-                        style={{
-                          transform: isHovered ? "scale(1.1)" : "scale(1)",
-                          transformOrigin: `${node.x}px ${node.y}px`,
-                          filter: isHovered
-                            ? "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))"
-                            : "none",
-                        }}
-                        onClick={() => handleNodeClick(node)}
-                        onMouseDown={(e) => handleMouseDown(e, node.id)}
-                        onTouchStart={(e) => handleTouchStart(e, node.id)}
-                        onMouseEnter={() => setHoveredNode(node.id)}
-                        onMouseLeave={() => setHoveredNode(null)}
-                      />
-
-                      {/* User icon - no profile images */}
-                      <User
-                        x={node.x - iconSize / 2}
-                        y={node.y - iconSize / 2}
-                        width={iconSize}
-                        height={iconSize}
-                        className={`fill-white pointer-events-none transition-all duration-200 ${
-                          isHovered ? "opacity-90" : "opacity-100"
-                        }`}
-                        style={{
-                          transform: isHovered ? "scale(1.1)" : "scale(1)",
-                          transformOrigin: `${node.x}px ${node.y}px`,
-                        }}
-                      />
-
-                      {/* Name label */}
-                      <text
-                        x={node.x}
-                        y={node.y + nodeRadius + (isMobile ? 12 : 15)}
-                        textAnchor="middle"
-                        className={`${
-                          isMobile ? "text-xs" : "text-sm"
-                        } font-medium fill-gray-700 pointer-events-none transition-all duration-200 ${
-                          isHovered ? "font-bold" : ""
-                        }`}
-                        style={{
-                          transform: isHovered ? "scale(1.05)" : "scale(1)",
-                          transformOrigin: `${node.x}px ${
-                            node.y + nodeRadius + (isMobile ? 12 : 15)
-                          }px`,
-                        }}
-                      >
-                        {isMobile && node.name.length > 8
-                          ? node.name.substring(0, 8) + "..."
-                          : node.name}
-                      </text>
-
-                      {node.isRoot && (
-                        <text
-                          x={node.x}
-                          y={node.y + nodeRadius + (isMobile ? 24 : 30)}
-                          textAnchor="middle"
-                          className={`${
-                            isMobile ? "text-xs" : "text-xs"
-                          } fill-blue-600 font-medium pointer-events-none transition-all duration-200 ${
-                            isHovered ? "font-bold" : ""
-                          }`}
+                  {/* Responsive layout */}
+                  <div className="flex md:justify-start md:even:justify-end">
+                    <div className="w-full md:w-[32%] pl-12 md:pl-0 md:odd:pl-8 md:even:pr-8 md:odd:mr-[30%] md:even:ml-[30%]">
+                      <div className="group">
+                        <div
+                          className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer transform transition-all duration-300 overflow-hidden border border-gray-100 mx-auto md:mx-0"
                           style={{
-                            transform: isHovered ? "scale(1.05)" : "scale(1)",
-                            transformOrigin: `${node.x}px ${
-                              node.y + nodeRadius + (isMobile ? 24 : 30)
-                            }px`,
+                            minWidth: "310px",
+                            maxWidth: "460px",
                           }}
+                          onClick={() => handlePostClick(post)}
                         >
-                          (You)
-                        </text>
-                      )}
-                    </g>
-                  );
-                })}
-              </svg>
-            </div>
-          </div>
-        )}
+                          {/* Date badge - responsive positioning */}
+                          <div className="absolute top-2 left-10 md:left-[calc(26%+1rem)] bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow z-10 group-hover:opacity-100 opacity-80 transition-opacity duration-200">
+                            {new Date(post.time).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </div>
 
-        {/* Node Details Modal */}
-        {selectedNode && selectedNode.data && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md">
-              <div className="flex items-start justify-between mb-4">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                  {selectedNode.name}
+                          {/* Image */}
+                          <div className="relative overflow-hidden">
+                            <img
+                              src={getImageUrl(
+                                post.id,
+                                post.has_image || false
+                              )}
+                              alt={post.title}
+                              className="w-full h-32 md:h-28 object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          </div>
+
+                          {/* Content */}
+                          <div className="p-4 md:p-3">
+                            <h3 className="text-lg md:text-base font-bold text-gray-800 mb-2 md:mb-1 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2 md:line-clamp-1">
+                              {post.title}
+                            </h3>
+                            <p className="text-gray-600 text-sm md:text-xs leading-relaxed mb-3 md:mb-2 line-clamp-3 md:line-clamp-2">
+                              {post.paragraph}
+                            </p>
+
+                            {/* Footer */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2 md:space-x-1 text-pink-500">
+                                <span className="text-lg md:text-base">❤️</span>
+                                <span className="font-semibold text-base md:text-sm">
+                                  {post.likes}
+                                </span>
+                                <span className="text-gray-400 text-sm md:text-xs">
+                                  Likes
+                                </span>
+                              </div>
+                              <div className="text-sm md:text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                View →
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Content for other tabs */}
+      {activeTab === 1 && (
+        <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Bio</h2>
+          <p className="text-gray-600">{user?.intro}</p>
+        </div>
+      )}
+
+      {activeTab === 2 && (
+        <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Media</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {posts
+              .filter((post) => post.has_image)
+              .map((post) => (
+                <div key={post.id} className="cursor-pointer">
+                  <img
+                    src={getImageUrl(post.id, post.has_image || false)}
+                    alt={post.title}
+                    className="rounded-md h-60 w-full object-cover hover:opacity-90 transition-opacity duration-200"
+                    onClick={() => handlePostClick(post)}
+                  />
+                </div>
+              ))}
+          </div>
+          {posts.filter((post) => post.has_image).length === 0 && (
+            <p className="text-gray-600">No media content available.</p>
+          )}
+        </div>
+      )}
+
+      {activeTab === 3 && (
+        <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Family Tree</h2>
+          <div className="flex justify-center">
+            <a
+              href={user ? `/guest/tree?userid=${user.id}` : "#"}
+              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 text-white rounded-full shadow-lg hover:from-emerald-500 hover:to-cyan-600 transition-all font-semibold text-lg gap-2 border-2 border-emerald-300 hover:scale-105"
+            >
+              <span className="text-2xl">🌳</span>
+              <span>View Family Tree</span>
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Post Detail Modal - Read-only version */}
+      {isModalOpen && selectedPost && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-20">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              {/* Modal Header */}
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  Post Details
                 </h2>
                 <button
-                  onClick={() => setSelectedNode(null)}
-                  className="text-gray-400 hover:text-gray-600"
+                  onClick={closeModal}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
                 >
-                  <X className="w-5 h-5" />
+                  ×
                 </button>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Relationship
-                  </label>
-                  <p className="text-gray-900 capitalize">
-                    {selectedNode.data.relationship}
-                  </p>
-                </div>
+              {/* Post Content - Read-only */}
+              <div className="space-y-3">
+                <img
+                  src={getImageUrl(
+                    selectedPost.id,
+                    selectedPost.has_image || false
+                  )}
+                  alt={selectedPost.title}
+                  className="w-full h-64 object-cover rounded-lg"
+                />
 
-                {selectedNode.data.profile_url && (
+                <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Profile Link
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Title
                     </label>
-                    <a
-                      href={selectedNode.data.profile_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 text-sm break-all underline"
-                    >
-                      {selectedNode.data.profile_url}
-                    </a>
+                    <p className="text-gray-900 font-semibold text-lg">
+                      {selectedPost.title}
+                    </p>
                   </div>
-                )}
 
-                <div className="pt-4 border-t">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date Posted
+                    </label>
+                    <p className="text-gray-900">
+                      {new Date(selectedPost.time).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Content
+                    </label>
+                    <p className="text-gray-900 leading-relaxed">
+                      {selectedPost.paragraph}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Likes
+                    </label>
+                    <div className="flex items-center gap-1 text-lg font-medium text-pink-500">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        className="w-6 h-6"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z"
+                        />
+                      </svg>
+                      <span className="text-base">{selectedPost.likes}</span>
+                    </div>
+                  </div>
+
+                  {/* Comments Section - Read-only */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Comments
+                    </label>
+
+                    <div className="space-y-2 mb-2 max-h-60 overflow-y-auto">
+                      {isLoadingComments ? (
+                        <div className="text-gray-500 text-sm">
+                          Loading comments...
+                        </div>
+                      ) : comments.length === 0 ? (
+                        <div className="text-gray-500 text-sm">
+                          No comments yet.
+                        </div>
+                      ) : (
+                        comments.map((comment) => (
+                          <div
+                            key={comment.id}
+                            className="bg-gray-100 rounded p-2"
+                          >
+                            <span className="text-gray-700">
+                              {comment.content}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Actions - Only close button for guests */}
+                <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
                   <button
-                    onClick={() => deleteRelative(selectedNode.data!.tree_id)}
-                    className="flex items-center space-x-2 text-red-600 hover:text-red-800 transition-colors"
+                    onClick={closeModal}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
                   >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Delete Relative</span>
+                    Close
                   </button>
                 </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Add Relative Modal */}
-        {showAddForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
-                Add New Relative
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={newRelative.relativeName}
-                    onChange={(e) =>
-                      setNewRelative({
-                        ...newRelative,
-                        relativeName: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Relationship *
-                  </label>
-                  <select
-                    value={newRelative.relationship}
-                    onChange={(e) =>
-                      setNewRelative({
-                        ...newRelative,
-                        relationship: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                    required
-                  >
-                    <option value="">Select relationship</option>
-                    <option value="parent">Parent</option>
-                    <option value="child">Child</option>
-                    <option value="sibling">Sibling</option>
-                    <option value="spouse">Spouse</option>
-                    <option value="grandparent">Grandparent</option>
-                    <option value="grandchild">Grandchild</option>
-                    <option value="aunt">Aunt</option>
-                    <option value="uncle">Uncle</option>
-                    <option value="cousin">Cousin</option>
-                    <option value="nephew">Nephew</option>
-                    <option value="niece">Niece</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Profile Link (optional)
-                  </label>
-                  <input
-                    type="url"
-                    value={newRelative.profileUrl}
-                    onChange={(e) =>
-                      setNewRelative({
-                        ...newRelative,
-                        profileUrl: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                    placeholder="https://example.com/"
-                  />
-                </div>
-                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddForm(false)}
-                    className="w-full sm:flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={addRelative}
-                    disabled={submitting}
-                    className="w-full sm:flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    {submitting ? "Adding..." : "Add Relative"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+      {/* Guest Footer - Optional back to home link */}
+      <div className="flex justify-center mt-10">
+        <button
+          onClick={() => router.push("/")}
+          className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600"
+        >
+          Back to Home
+        </button>
       </div>
     </div>
   );

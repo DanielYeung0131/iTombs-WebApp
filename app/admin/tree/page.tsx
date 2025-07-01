@@ -66,7 +66,7 @@ export default function FamilyTreeVisualization() {
       typeof window !== "undefined"
         ? window.innerWidth + (window.innerWidth < 700 ? 100 : 0)
         : 800, // Initialize with window.innerWidth if available, otherwise a default
-    height: typeof window !== "undefined" ? window.innerHeight - 350 : 400, // Initialize with window.innerHeight if available, otherwise a default
+    height: typeof window !== "undefined" ? window.innerHeight - 300 : 400, // Initialize with window.innerHeight if available, otherwise a default
   });
 
   const windowWidth = typeof window !== "undefined" ? window.innerWidth : 1024;
@@ -87,8 +87,8 @@ export default function FamilyTreeVisualization() {
 
         setIsMobile(isMobileView);
 
-        const width = Math.min(containerWidth - 32, isMobileView ? 350 : 800);
-        const height = isMobileView ? 400 : 600;
+        const width = Math.min(containerWidth - 32, isMobileView ? 400 : 800);
+        const height = isMobileView ? 500 : 600;
 
         setSvgDimensions({ width, height });
       }
@@ -135,8 +135,8 @@ export default function FamilyTreeVisualization() {
     const nodes: GraphNode[] = [];
     const edges: GraphEdge[] = [];
 
-    const centerX = (svgDimensions.width - (isMobile ? 100 : 200)) / 2;
-    const centerY = svgDimensions.height / 2 + (isMobile ? 40 : 100);
+    const centerX = (svgDimensions.width - (isMobile ? 100 : 50)) / 2;
+    const centerY = svgDimensions.height / 2;
     const baseRadius = isMobile ? 80 : 150;
 
     // Always create root node
