@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
     const userId = formData.get("userId") as string;
     const title = formData.get("title") as string;
     const paragraph = formData.get("paragraph") as string;
+    const category = formData.get("category") as string;
     const image = formData.get("image") as File | null;
 
     if (!userId || !title || !paragraph) {
@@ -55,14 +56,14 @@ export async function POST(request: NextRequest) {
 
     // Insert the post into database
     const [result] = await db.execute(
-      "INSERT INTO Post (user_id, title, paragraph, image_blob, image_mime_type, time, likes) VALUES (?, ?, ?, ?, ?, NOW(), 0)",
-      [parseInt(userId), title, paragraph, imageBuffer, imageMimeType]
+      "INSERT INTO Post (user_id, title, paragraph, image_blob, image_mime_type, time, likes, category) VALUES (?, ?, ?, ?, ?, NOW(), 0, ?)",
+      [parseInt(userId), title, paragraph, imageBuffer, imageMimeType, category]
     );
 
     // Get the created post (without the blob data for response)
     const insertId = (result as any).insertId;
     const [createdPost] = await db.execute(
-      "SELECT id, user_id, title, paragraph, image_mime_type, time, likes FROM Post WHERE id = ?",
+      "SELECT id, user_id, title, paragraph, image_mime_type, time, likes, category FROM Post WHERE id = ?",
       [insertId]
     );
 
@@ -89,6 +90,7 @@ export async function PUT(request: NextRequest) {
     const id = formData.get("id") as string;
     const title = formData.get("title") as string;
     const paragraph = formData.get("paragraph") as string;
+    const category = formData.get("category") as string;
     const image = formData.get("image") as File | null;
 
     if (!id || !title || !paragraph) {
@@ -139,13 +141,13 @@ export async function PUT(request: NextRequest) {
     // Update the post - only update image if new one provided
     if (imageBuffer) {
       [result] = await db.execute(
-        "UPDATE Post SET title = ?, paragraph = ?, image_blob = ?, image_mime_type = ? WHERE id = ?",
-        [title, paragraph, imageBuffer, imageMimeType, postId]
+        "UPDATE Post SET title = ?, paragraph = ?, image_blob = ?, image_mime_type = ?, category = ? WHERE id = ?",
+        [title, paragraph, imageBuffer, imageMimeType, category, postId]
       );
     } else {
       [result] = await db.execute(
-        "UPDATE Post SET title = ?, paragraph = ? WHERE id = ?",
-        [title, paragraph, postId]
+        "UPDATE Post SET title = ?, paragraph = ?, category = ? WHERE id = ?",
+        [title, paragraph, category, postId]
       );
     }
 
@@ -159,7 +161,7 @@ export async function PUT(request: NextRequest) {
 
     // Get the updated post (without the blob data for response)
     const [updatedPost] = await db.execute(
-      "SELECT id, user_id, title, paragraph, image_mime_type, time, likes FROM Post WHERE id = ?",
+      "SELECT id, user_id, title, paragraph, image_mime_type, time, likes, category FROM Post WHERE id = ?",
       [postId]
     );
 
@@ -216,11 +218,21 @@ export async function GET(req: Request) {
   try {
     // Simulate user_id lookup from auth cookie/session (replace with real session logic)
     const userId = new URL(req.url).searchParams.get("user");
+    const category = new URL(req.url).searchParams.get("category");
 
-    const [rows] = await db.execute(
-      "SELECT id, title, paragraph, time, likes, image_mime_type FROM Post WHERE user_id = ? ORDER BY time DESC",
-      [userId]
-    );
+    let query =
+      "SELECT id, title, paragraph, time, likes, image_mime_type, category FROM Post WHERE user_id = ?";
+    let params = [userId];
+
+    // Add category filter if provided
+    if (category) {
+      query += " AND category = ?";
+      params.push(category);
+    }
+
+    query += " ORDER BY time DESC";
+
+    const [rows] = await db.execute(query, params);
 
     // Add has_image flag to each post
     const posts = (rows as any[]).map((post) => ({

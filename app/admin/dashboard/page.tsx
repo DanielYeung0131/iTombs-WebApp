@@ -9,8 +9,9 @@ interface Post {
   paragraph: string;
   time: string;
   likes: number;
-  has_image?: boolean; // Changed from image?: string
+  has_image?: boolean;
   image_mime_type?: string;
+  category?: string;
 }
 
 interface User {
@@ -60,7 +61,11 @@ export default function AdminDashboard() {
 
   // Add Post Modal States
   const [isAddPostModalOpen, setIsAddPostModalOpen] = useState(false);
-  const [newPost, setNewPost] = useState({ title: "", paragraph: "" });
+  const [newPost, setNewPost] = useState({
+    title: "",
+    paragraph: "",
+    category: "",
+  });
   const [isCreatingPost, setIsCreatingPost] = useState(false);
 
   const router = useRouter();
@@ -284,6 +289,10 @@ export default function AdminDashboard() {
       formData.append("title", newPost.title.trim());
       formData.append("paragraph", newPost.paragraph.trim());
 
+      if (newPost.category.trim()) {
+        formData.append("category", newPost.category.trim());
+      }
+
       if (newPostImage) {
         formData.append("image", newPostImage);
       }
@@ -317,7 +326,7 @@ export default function AdminDashboard() {
 
   const handleEditPost = () => {
     if (selectedPost) {
-      setEditedPost({ ...selectedPost });
+      setEditedPost({ ...selectedPost, category: selectedPost.category || "" });
       setEditedPostImagePreview("");
       setIsEditMode(true);
     }
@@ -336,6 +345,10 @@ export default function AdminDashboard() {
       formData.append("id", editedPost.id.toString());
       formData.append("title", editedPost.title);
       formData.append("paragraph", editedPost.paragraph);
+
+      if (editedPost.category?.trim()) {
+        formData.append("category", editedPost.category.trim());
+      }
 
       if (editedPostImage) {
         formData.append("image", editedPostImage);
@@ -430,7 +443,7 @@ export default function AdminDashboard() {
 
   const closeAddPostModal = () => {
     setIsAddPostModalOpen(false);
-    setNewPost({ title: "", paragraph: "" });
+    setNewPost({ title: "", paragraph: "", category: "" }); // Add category: ""
     setNewPostImage(null);
     setNewPostImagePreview("");
   };
@@ -832,6 +845,23 @@ export default function AdminDashboard() {
                     required
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Category (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={newPost.category}
+                    onChange={(e) =>
+                      setNewPost((prev) => ({
+                        ...prev,
+                        category: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    placeholder="Enter category (e.g., family, work, travel)..."
+                  />
+                </div>
 
                 {/* Modal Actions */}
                 <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
@@ -957,6 +987,19 @@ export default function AdminDashboard() {
                     </p>
                   </div>
 
+                  {selectedPost.category && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Category
+                      </label>
+                      <p className="text-gray-900">
+                        <span className="inline-block bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm">
+                          {selectedPost.category}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Content
@@ -978,6 +1021,25 @@ export default function AdminDashboard() {
                       </p>
                     )}
                   </div>
+
+                  {isEditMode && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Category
+                      </label>
+                      <input
+                        type="text"
+                        value={editedPost?.category || ""}
+                        onChange={(e) =>
+                          setEditedPost((prev) =>
+                            prev ? { ...prev, category: e.target.value } : null
+                          )
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        placeholder="Enter category..."
+                      />
+                    </div>
+                  )}
 
                   {!isEditMode && (
                     <div>
