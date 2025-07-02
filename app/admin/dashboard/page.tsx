@@ -714,7 +714,9 @@ export default function AdminDashboard() {
               </p>
             </div>
             <a
-              href="/admin/netflix"
+              href={
+                user ? `/admin/netflix?userid=${user.id}` : "/admin/netflix"
+              }
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-red-600 via-red-500 to-pink-500 text-white rounded-full shadow-lg hover:from-red-700 hover:to-pink-600 transition-all font-semibold text-base border-2 border-red-400 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-400"
               target="_blank"
               rel="noopener noreferrer"
