@@ -57,7 +57,14 @@ export async function POST(request: NextRequest) {
     // Insert the post into database
     const [result] = await db.execute(
       "INSERT INTO Post (user_id, title, paragraph, image_blob, image_mime_type, time, likes, category) VALUES (?, ?, ?, ?, ?, NOW(), 0, ?)",
-      [parseInt(userId), title, paragraph, imageBuffer, imageMimeType, category]
+      [
+        parseInt(userId),
+        title,
+        paragraph,
+        imageBuffer,
+        imageMimeType,
+        category || null,
+      ]
     );
 
     // Get the created post (without the blob data for response)
@@ -147,7 +154,7 @@ export async function PUT(request: NextRequest) {
     } else {
       [result] = await db.execute(
         "UPDATE Post SET title = ?, paragraph = ?, category = ? WHERE id = ?",
-        [title, paragraph, category, postId]
+        [title, paragraph, category || null, postId]
       );
     }
 

@@ -11,7 +11,7 @@ interface Post {
   likes: number;
   has_image?: boolean;
   image_mime_type?: string;
-  category?: string;
+  category?: string | null; // Make it explicitly nullable
 }
 
 interface User {
@@ -310,7 +310,7 @@ export default function AdminDashboard() {
       setPosts((prevPosts) => [data.post, ...prevPosts]);
 
       // Reset form and close modal
-      setNewPost({ title: "", paragraph: "" });
+      setNewPost({ title: "", paragraph: "", category: "" });
       setNewPostImage(null);
       setNewPostImagePreview("");
       setIsAddPostModalOpen(false);
@@ -326,11 +326,15 @@ export default function AdminDashboard() {
 
   const handleEditPost = () => {
     if (selectedPost) {
-      setEditedPost({ ...selectedPost, category: selectedPost.category || "" });
+      setEditedPost({
+        ...selectedPost,
+        category: selectedPost.category || "", // Make sure category is never undefined
+      });
       setEditedPostImagePreview("");
       setIsEditMode(true);
     }
   };
+
   const handleCancelEdit = () => {
     setIsEditMode(false);
     setEditedPost(null);
@@ -443,7 +447,7 @@ export default function AdminDashboard() {
 
   const closeAddPostModal = () => {
     setIsAddPostModalOpen(false);
-    setNewPost({ title: "", paragraph: "", category: "" }); // Add category: ""
+    setNewPost({ title: "", paragraph: "", category: "" }); // This line is already correct
     setNewPostImage(null);
     setNewPostImagePreview("");
   };
@@ -656,6 +660,14 @@ export default function AdminDashboard() {
                             <p className="text-gray-600 text-sm md:text-xs leading-relaxed mb-3 md:mb-2 line-clamp-3 md:line-clamp-2">
                               {post.paragraph}
                             </p>
+
+                            {post.category && (
+                              <div className="mt-2">
+                                <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                                  {post.category}
+                                </span>
+                              </div>
+                            )}
 
                             {/* Footer */}
                             <div className="flex items-center justify-between">
@@ -987,16 +999,22 @@ export default function AdminDashboard() {
                     </p>
                   </div>
 
-                  {selectedPost.category && (
+                  {isEditMode && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Category
+                        Category (Optional)
                       </label>
-                      <p className="text-gray-900">
-                        <span className="inline-block bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm">
-                          {selectedPost.category}
-                        </span>
-                      </p>
+                      <input
+                        type="text"
+                        value={editedPost?.category || ""}
+                        onChange={(e) =>
+                          setEditedPost((prev) =>
+                            prev ? { ...prev, category: e.target.value } : null
+                          )
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        placeholder="Enter category (e.g., family, work, travel)..."
+                      />
                     </div>
                   )}
 
@@ -1021,6 +1039,17 @@ export default function AdminDashboard() {
                       </p>
                     )}
                   </div>
+
+                  {!isEditMode && selectedPost.category && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Category
+                      </label>
+                      <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                        {selectedPost.category}
+                      </span>
+                    </div>
+                  )}
 
                   {isEditMode && (
                     <div>
