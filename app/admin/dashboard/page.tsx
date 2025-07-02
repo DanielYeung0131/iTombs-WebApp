@@ -617,12 +617,26 @@ export default function AdminDashboard() {
           ) : (
             <div className="relative">
               {/* Timeline line - positioned more left of center */}
-              <div className="absolute inset-y-0 left-6 md:left-[26%] w-1 bg-gradient-to-b from-blue-400 via-purple-500 to-pink-500"></div>
+              {/* Timeline vertical line with glow and subtle shadow */}
+              <div
+                className="absolute inset-y-0 left-6 md:left-[26%] w-2 md:w-2.5 bg-gradient-to-b from-blue-400 via-purple-400 to-pink-400 rounded-full shadow-lg z-10"
+                style={{
+                  filter:
+                    "drop-shadow(0 0 8px #a5b4fc) drop-shadow(0 0 16px #f472b6)",
+                  opacity: 0.6,
+                }}
+              >
+                {/* Decorative animated pulse */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-5 bg-blue-400/40 rounded-full blur-md animate-pulse"></div>
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-5 bg-pink-400/40 rounded-full blur-md animate-pulse"></div>
+              </div>
 
               {posts.map((post) => (
                 <div key={post.id} className="relative mb-12 last:mb-0">
                   {/* Timeline dot - positioned to match the line */}
-                  <div className="absolute left-6 md:left-[26.25%] -translate-x-1/2 w-4 h-4 bg-white border-4 border-blue-500 rounded-full shadow-lg z-10"></div>
+                  <div className="absolute left-6.5 md:left-[26.3%] -translate-x-1/2 w-7 h-7 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 border-4 border-white rounded-full shadow-xl z-20 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
+                    <div className="w-3 h-3 bg-white rounded-full shadow-inner"></div>
+                  </div>
 
                   {/* Responsive layout */}
                   <div className="flex md:justify-start md:even:justify-end">
@@ -638,7 +652,7 @@ export default function AdminDashboard() {
                           onClick={() => handlePostClick(post)}
                         >
                           {/* Date badge - responsive positioning */}
-                          <div className="absolute top-2 left-10 md:left-[calc(26%+1rem)] bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow z-10 group-hover:opacity-100 opacity-80 transition-opacity duration-200">
+                          <div className="absolute top-2 left-12.5 md:left-[calc(27%+1rem)] bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold shadow z-10 group-hover:opacity-100 opacity-80 transition-opacity duration-200">
                             {new Date(post.time).toLocaleDateString("en-US", {
                               month: "short",
                               day: "numeric",
@@ -647,48 +661,83 @@ export default function AdminDashboard() {
                           </div>
 
                           {/* Image */}
-                          <div className="relative overflow-hidden">
+                          <div className="relative overflow-hidden rounded-lg shadow-inner group">
                             <img
                               src={getImageUrl(
                                 post.id,
                                 post.has_image || false
                               )}
                               alt={post.title}
-                              className="w-full h-32 md:h-28 object-cover group-hover:scale-105 transition-transform duration-300"
+                              className="w-full h-36 md:h-32 object-cover group-hover:scale-110 transition-transform duration-300 ease-in-out brightness-95 group-hover:brightness-100"
+                              style={{
+                                filter:
+                                  "drop-shadow(0 2px 12px rgba(59,130,246,0.10))",
+                              }}
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            {/* Gradient overlay for better text readability and visual appeal */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-blue-200/40 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                            {/* Decorative border and icon */}
+                            <div className="absolute top-2 right-2 bg-white/80 rounded-full px-2 py-1 flex items-center gap-1 shadow text-blue-600 text-xs font-semibold z-10">
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M15.232 5.232l3.536 3.536M9 13h3l8-8a2.828 2.828 0 10-4-4l-8 8v3z"
+                                />
+                              </svg>
+                              {post.has_image ? "Photo" : "No Image"}
+                            </div>
                           </div>
 
                           {/* Content */}
-                          <div className="p-4 md:p-3">
-                            <h3 className="text-lg md:text-base font-bold text-gray-800 mb-2 md:mb-1 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2 md:line-clamp-1">
+                          <div className="p-5 md:p-4 bg-gradient-to-br from-white via-blue-50 to-yellow-50 rounded-lg shadow-inner transition-all duration-300 group-hover:bg-blue-50/60">
+                            <h3 className="text-xl md:text-lg font-extrabold text-blue-800 mb-2 md:mb-1 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2 md:line-clamp-1 drop-shadow-sm">
                               {post.title}
                             </h3>
-                            <p className="text-gray-600 text-sm md:text-xs leading-relaxed mb-3 md:mb-2 line-clamp-3 md:line-clamp-2">
+                            <p className="text-gray-700 text-base md:text-sm leading-relaxed mb-3 md:mb-2 line-clamp-3 md:line-clamp-2 font-serif">
                               {post.paragraph}
                             </p>
 
                             {post.category && (
                               <div className="mt-2">
-                                <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                                  {post.category}
+                                <span className="inline-block bg-gradient-to-r from-blue-200 via-blue-100 to-yellow-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold shadow-sm border border-blue-100">
+                                  #{post.category}
                                 </span>
                               </div>
                             )}
 
                             {/* Footer */}
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2 md:space-x-1 text-pink-500">
-                                <span className="text-lg md:text-base">❤️</span>
-                                <span className="font-semibold text-base md:text-sm">
+                            <div className="flex items-center justify-between mt-4">
+                              <div className="flex items-center gap-2 text-pink-500">
+                                <span className="text-xl md:text-base">❤️</span>
+                                <span className="font-bold text-base md:text-sm">
                                   {post.likes}
                                 </span>
-                                <span className="text-gray-400 text-sm md:text-xs">
+                                <span className="text-gray-400 text-xs md:text-xs font-medium">
                                   Likes
                                 </span>
                               </div>
-                              <div className="text-sm md:text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                View →
+                              <div className="text-xs md:text-xs text-blue-500 font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1">
+                                <span>View</span>
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth={2}
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M9 5l7 7-7 7"
+                                  />
+                                </svg>
                               </div>
                             </div>
                           </div>
@@ -747,13 +796,13 @@ export default function AdminDashboard() {
       )}
 
       {activeTab === 2 && (
-        <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center justify-between mb-4">
+        <div className="max-w-3xl mx-auto mt-8 bg-gradient-to-br from-pink-50 via-white to-yellow-50 p-8 rounded-2xl shadow-2xl">
+          <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
             <div>
-              <h2 className="text-2xl font-bold mb-1 text-pink-600 tracking-tight">
+              <h2 className="text-3xl font-extrabold mb-1 text-pink-700 tracking-tight drop-shadow">
                 Media Gallery
               </h2>
-              <p className="text-gray-500 text-sm mb-2 italic">
+              <p className="text-gray-500 text-base italic">
                 Click any image to view details.
               </p>
             </div>
@@ -761,17 +810,17 @@ export default function AdminDashboard() {
               href={
                 user ? `/admin/netflix?userid=${user.id}` : "/admin/netflix"
               }
-              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-red-600 via-red-500 to-pink-500 text-white rounded-full shadow-lg hover:from-red-700 hover:to-pink-600 transition-all font-semibold text-sm border border-red-400 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-400"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 via-pink-500 to-yellow-400 text-white rounded-full shadow-lg hover:from-red-600 hover:to-yellow-500 transition-all font-semibold text-base border-2 border-pink-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-pink-400"
               style={{
-                boxShadow: "0 2px 8px 0 rgba(220,38,38,0.12)",
+                boxShadow: "0 2px 12px 0 rgba(236,72,153,0.12)",
                 letterSpacing: "0.01em",
               }}
             >
-              <span className="text-base">🎬</span>
+              <span className="text-lg">🎬</span>
               <span>Netflix Page</span>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-3 w-3"
+                className="h-4 w-4"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -785,48 +834,150 @@ export default function AdminDashboard() {
               </svg>
             </a>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {posts
               .filter((post) => post.has_image)
               .map((post) => (
-                <div key={post.id} className="cursor-pointer">
+                <div
+                  key={post.id}
+                  className="relative group cursor-pointer rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300 bg-white"
+                  onClick={() => handlePostClick(post)}
+                >
                   <img
                     src={getImageUrl(post.id, post.has_image || false)}
                     alt={post.title}
-                    className="mt-3 rounded-md h-70 w-full object-cover hover:opacity-70 transition-opacity duration-200"
-                    onClick={() => handlePostClick(post)}
+                    className="h-56 w-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-white/80 backdrop-blur-sm">
+                    <h3 className="text-lg font-bold text-pink-700 truncate">
+                      {post.title}
+                    </h3>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs text-gray-500">
+                        {new Date(post.time).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                      {post.category && (
+                        <span className="inline-block bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-xs font-medium ml-2">
+                          {post.category}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="absolute top-2 right-2 bg-white/80 rounded-full px-3 py-1 flex items-center gap-1 shadow text-pink-600 text-xs font-semibold">
+                    <span>❤️</span>
+                    <span>{post.likes}</span>
+                  </div>
                 </div>
               ))}
           </div>
           {posts.filter((post) => post.has_image).length === 0 && (
-            <p className="text-gray-600">No media content available.</p>
+            <div className="flex flex-col items-center mt-10">
+              <span className="text-6xl text-gray-300 mb-2">🖼️</span>
+              <p className="text-gray-500 text-lg italic">
+                No media content available.
+              </p>
+            </div>
           )}
         </div>
       )}
 
       {activeTab === 3 && (
-        <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
+        <div className="max-w-3xl mx-auto mt-10 bg-gradient-to-br from-emerald-50 via-white to-cyan-50 p-10 rounded-3xl shadow-2xl flex flex-col items-center">
+          {/* Header */}
           <div className="flex flex-col items-center mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-3xl">🌳</span>
-              <h2 className="text-2xl font-bold text-emerald-700 tracking-tight">
+              <span className="text-4xl animate-bounce-slow">🌳</span>
+              <h2 className="text-3xl md:text-4xl font-extrabold text-emerald-700 tracking-tight drop-shadow">
                 Family Tree
               </h2>
             </div>
-            <div className="w-24 h-1 bg-gradient-to-r from-emerald-300 via-teal-300 to-cyan-300 rounded-full mb-2"></div>
-            <p className="text-gray-600 text-center max-w-md">
-              Explore the family lineage and connections. Click below to view or
-              edit the full family tree.
+            <div className="w-28 h-1 bg-gradient-to-r from-emerald-300 via-teal-300 to-cyan-300 rounded-full mb-3"></div>
+            <p className="text-gray-600 text-center max-w-lg text-lg md:text-xl font-medium">
+              Discover the legacy and connections of your family. Visualize
+              relationships and explore your ancestry in a beautiful interactive
+              tree.
             </p>
           </div>
+          {/* Illustration */}
+          <div className="flex justify-center mb-8">
+            <div className="relative">
+              <svg
+                width="180"
+                height="100"
+                viewBox="0 0 180 100"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="mx-auto"
+              >
+                <ellipse cx="90" cy="90" rx="70" ry="10" fill="#D1FAE5" />
+                <path
+                  d="M90 90 Q90 60 60 60 Q30 60 30 30 Q30 10 60 10 Q90 10 90 30 Q90 10 120 10 Q150 10 150 30 Q150 60 120 60 Q90 60 90 90"
+                  stroke="#34D399"
+                  strokeWidth="4"
+                  fill="#A7F3D0"
+                />
+                <circle
+                  cx="60"
+                  cy="30"
+                  r="12"
+                  fill="#6EE7B7"
+                  stroke="#059669"
+                  strokeWidth="2"
+                />
+                <circle
+                  cx="120"
+                  cy="30"
+                  r="12"
+                  fill="#6EE7B7"
+                  stroke="#059669"
+                  strokeWidth="2"
+                />
+                <circle
+                  cx="90"
+                  cy="30"
+                  r="14"
+                  fill="#34D399"
+                  stroke="#059669"
+                  strokeWidth="2"
+                />
+                <circle
+                  cx="90"
+                  cy="60"
+                  r="10"
+                  fill="#99F6E4"
+                  stroke="#0891B2"
+                  strokeWidth="2"
+                />
+              </svg>
+            </div>
+          </div>
+          {/* CTA Button */}
           <div className="flex justify-center">
             <a
               href={user ? `/admin/tree?userid=${user.id}` : "#"}
-              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 text-white rounded-full shadow-lg hover:from-emerald-500 hover:to-cyan-600 transition-all font-semibold text-lg gap-2 border-2 border-emerald-300 hover:scale-105"
+              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 text-white rounded-full shadow-xl hover:from-emerald-500 hover:to-cyan-600 transition-all font-semibold text-xl gap-3 border-2 border-emerald-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-emerald-400"
             >
-              <span className="text-2xl">🌳</span>
+              <span className="text-3xl">🌳</span>
               <span>View Family Tree</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6 ml-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 8l4 4m0 0l-4 4m4-4H3"
+                />
+              </svg>
             </a>
           </div>
         </div>
