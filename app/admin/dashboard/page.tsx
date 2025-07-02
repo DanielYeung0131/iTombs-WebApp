@@ -998,7 +998,7 @@ export default function AdminDashboard() {
                       {new Date(selectedPost.time).toLocaleString()}
                     </p>
                   </div>
-
+                  {/* 
                   {isEditMode && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1016,7 +1016,7 @@ export default function AdminDashboard() {
                         placeholder="Enter category (e.g., family, work, travel)..."
                       />
                     </div>
-                  )}
+                  )} */}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1040,17 +1040,6 @@ export default function AdminDashboard() {
                     )}
                   </div>
 
-                  {!isEditMode && selectedPost.category && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Category
-                      </label>
-                      <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                        {selectedPost.category}
-                      </span>
-                    </div>
-                  )}
-
                   {isEditMode && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1067,6 +1056,17 @@ export default function AdminDashboard() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
                         placeholder="Enter category..."
                       />
+                    </div>
+                  )}
+
+                  {!isEditMode && selectedPost.category && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Category
+                      </label>
+                      <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                        {selectedPost.category}
+                      </span>
                     </div>
                   )}
 
