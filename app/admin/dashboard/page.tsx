@@ -986,71 +986,92 @@ export default function AdminDashboard() {
       {/* Add Post Modal */}
       {isAddPostModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-20">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100 opacity-100">
             <div className="p-6">
               {/* Modal Header */}
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-2xl font-bold text-gray-800">
+              <div className="flex justify-between items-center mb-4 border-b pb-3">
+                <h2 className="text-3xl font-extrabold text-gray-900">
                   Add New Post
                 </h2>
                 <button
                   onClick={closeAddPostModal}
-                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                  className="text-gray-500 hover:text-gray-700 text-4xl font-light leading-none transition-transform duration-200 hover:rotate-90"
+                  aria-label="Close modal"
                 >
-                  ×
+                  &times;
                 </button>
               </div>
 
               {/* Add Post Form */}
-              <form onSubmit={handleCreatePost} className="space-y-4">
+              <form onSubmit={handleCreatePost} className="space-y-6">
+                {/* Post Image Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Post Image (Optional)
                   </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload(e, false)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                  />
-                  {newPostImagePreview && (
-                    <div className="mt-2 relative">
-                      <img
-                        src={newPostImagePreview}
-                        alt="Preview"
-                        className="w-full h-48 object-cover rounded-md"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(false)}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  )}
+                  <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-yellow-500 transition-colors duration-200 cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(e, false)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      aria-label="Upload post image"
+                    />
+                    {newPostImagePreview ? (
+                      <div className="relative">
+                        <img
+                          src={newPostImagePreview}
+                          alt="Preview"
+                          className="w-full h-48 object-cover rounded-md shadow-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(false)}
+                          className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-red-700 transition-all duration-200 text-xl font-bold"
+                          aria-label="Remove image"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-gray-500">
+                        Drag & drop an image here, or click to select one
+                      </p>
+                    )}
+                  </div>
                 </div>
+
+                {/* Post Title */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Post Title *
+                  <label
+                    htmlFor="new-post-title"
+                    className="block text-sm font-semibold text-gray-700 mb-2"
+                  >
+                    Post Title <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="new-post-title"
                     type="text"
                     value={newPost.title}
                     onChange={(e) =>
                       setNewPost((prev) => ({ ...prev, title: e.target.value }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all duration-200 text-lg"
                     placeholder="Enter post title..."
                     required
                   />
                 </div>
 
+                {/* Post Content */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Post Content *
+                  <label
+                    htmlFor="new-post-content"
+                    className="block text-sm font-semibold text-gray-700 mb-2"
+                  >
+                    Post Content <span className="text-red-500">*</span>
                   </label>
                   <textarea
+                    id="new-post-content"
                     value={newPost.paragraph}
                     onChange={(e) =>
                       setNewPost((prev) => ({
@@ -1059,16 +1080,22 @@ export default function AdminDashboard() {
                       }))
                     }
                     rows={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all duration-200 text-base resize-y"
                     placeholder="Write your post content here..."
                     required
                   />
                 </div>
+
+                {/* Category */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="new-post-category"
+                    className="block text-sm font-semibold text-gray-700 mb-2"
+                  >
                     Category (Optional)
                   </label>
                   <input
+                    id="new-post-category"
                     type="text"
                     value={newPost.category}
                     onChange={(e) =>
@@ -1077,24 +1104,24 @@ export default function AdminDashboard() {
                         category: e.target.value,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all duration-200 text-base"
                     placeholder="Enter category (e.g., family, work, travel)..."
                   />
                 </div>
 
                 {/* Modal Actions */}
-                <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                <div className="flex justify-end gap-4 pt-5 border-t border-gray-200">
                   <button
                     type="button"
                     onClick={closeAddPostModal}
-                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                    className="px-6 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors duration-200 font-medium"
                     disabled={isCreatingPost}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-md"
                     disabled={
                       isCreatingPost ||
                       !newPost.title.trim() ||
@@ -1113,333 +1140,333 @@ export default function AdminDashboard() {
       {/* Post Detail Modal */}
       {isModalOpen && selectedPost && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-20">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100 opacity-100">
             <div className="p-6">
               {/* Modal Header */}
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-2xl font-bold text-gray-800">
+              <div className="flex justify-between items-center mb-4 border-b pb-3">
+                <h2 className="text-3xl font-extrabold text-gray-900">
                   {isEditMode ? "Edit Post" : "Post Details"}
                 </h2>
                 <button
                   onClick={closeModal}
-                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                  className="text-gray-500 hover:text-gray-700 text-4xl font-light leading-none transition-transform duration-200 hover:rotate-90"
+                  aria-label="Close modal"
                 >
-                  ×
+                  &times;
                 </button>
               </div>
 
               {/* Post Content */}
-              <div className="space-y-3">
-                {isEditMode ? (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Post Image
-                    </label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageUpload(e, true)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 mb-2"
-                    />
-                    {(editedPostImagePreview || selectedPost.has_image) && (
-                      <div className="relative">
-                        <img
-                          src={
-                            editedPostImagePreview ||
-                            getImageUrl(
-                              selectedPost.id,
-                              selectedPost.has_image || false
-                            )
-                          }
-                          alt={selectedPost.title}
-                          className="w-full h-64 object-cover rounded-lg"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(true)}
-                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <img
-                    src={getImageUrl(
-                      selectedPost.id,
-                      selectedPost.has_image || false
-                    )}
-                    alt={selectedPost.title}
-                    className="w-full h-64 object-cover rounded-lg"
-                  />
-                )}
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Title
-                    </label>
-                    {isEditMode ? (
+              <div className="space-y-6 py-4">
+                {/* Post Image Section */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Post Image
+                  </label>
+                  {isEditMode ? (
+                    <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-yellow-500 transition-colors duration-200">
                       <input
-                        type="text"
-                        value={editedPost?.title || ""}
-                        onChange={(e) =>
-                          setEditedPost((prev) =>
-                            prev ? { ...prev, title: e.target.value } : null
-                          )
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(e, true)}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        aria-label="Upload post image"
                       />
-                    ) : (
-                      <p className="text-gray-900 font-semibold text-lg">
-                        {selectedPost.title}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Date Posted
-                    </label>
-                    <p className="text-gray-900">
-                      {new Date(selectedPost.time).toLocaleString()}
-                    </p>
-                  </div>
-                  {/* 
-                  {isEditMode && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Category (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={editedPost?.category || ""}
-                        onChange={(e) =>
-                          setEditedPost((prev) =>
-                            prev ? { ...prev, category: e.target.value } : null
-                          )
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                        placeholder="Enter category (e.g., family, work, travel)..."
-                      />
-                    </div>
-                  )} */}
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Content
-                    </label>
-                    {isEditMode ? (
-                      <textarea
-                        value={editedPost?.paragraph || ""}
-                        onChange={(e) =>
-                          setEditedPost((prev) =>
-                            prev ? { ...prev, paragraph: e.target.value } : null
-                          )
-                        }
-                        rows={4}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                      />
-                    ) : (
-                      <p className="text-gray-900 leading-relaxed">
-                        {selectedPost.paragraph}
-                      </p>
-                    )}
-                  </div>
-
-                  {isEditMode && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Category
-                      </label>
-                      <input
-                        type="text"
-                        value={editedPost?.category || ""}
-                        onChange={(e) =>
-                          setEditedPost((prev) =>
-                            prev ? { ...prev, category: e.target.value } : null
-                          )
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                        placeholder="Enter category..."
-                      />
-                    </div>
-                  )}
-
-                  {!isEditMode && selectedPost.category && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Category
-                      </label>
-                      <span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                        {selectedPost.category}
-                      </span>
-                    </div>
-                  )}
-
-                  {!isEditMode && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Likes
-                      </label>
-                      <button
-                        className={`flex items-center gap-1 text-lg font-medium focus:outline-none transition-colors ${
-                          selectedPost.likes > 0
-                            ? "text-pink-500"
-                            : "text-gray-400"
-                        } hover:scale-110`}
-                        type="button"
-                        onClick={() => {
-                          setSelectedPost((prev) =>
-                            prev
-                              ? {
-                                  ...prev,
-                                  likes: prev.likes + 1,
-                                }
-                              : prev
-                          );
-                          setPosts((prevPosts) =>
-                            prevPosts.map((post) =>
-                              post.id === selectedPost.id
-                                ? { ...post, likes: post.likes + 1 }
-                                : post
-                            )
-                          );
-                          fetch(`/api/admin/posts/likes`, {
-                            method: "PUT",
-                            headers: {
-                              "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({
-                              id: selectedPost.id,
-                            }),
-                          }).catch((err) => {
-                            console.error("Error updating likes:", err);
-                          });
-                        }}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill={
-                            selectedPost.likes > 0 ? "currentColor" : "none"
-                          }
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          className="w-6 h-6"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z"
-                          />
-                        </svg>
-                        <span className="text-base">{selectedPost.likes}</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {!isEditMode && (
-                    <div>
-                      {/* Comment Section */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Comments
-                        </label>
-
-                        {/* Comments List */}
-                        <div className="space-y-2 mb-2 max-h-60 overflow-y-auto">
-                          {isLoadingComments ? (
-                            <div className="text-gray-500 text-sm">
-                              Loading comments...
-                            </div>
-                          ) : comments.length === 0 ? (
-                            <div className="text-gray-500 text-sm">
-                              No comments yet. Be the first to comment!
-                            </div>
-                          ) : (
-                            comments.map((comment) => (
-                              <div
-                                key={comment.id}
-                                className="bg-gray-100 rounded p-2"
-                              >
-                                <span className="text-gray-700">
-                                  {comment.content}
-                                </span>
-                              </div>
-                            ))
-                          )}
-                        </div>
-
-                        {/* Add Comment Form */}
-                        <form
-                          className="flex gap-2 mt-2"
-                          onSubmit={submitComment}
-                        >
-                          <input
-                            type="text"
-                            className="flex-1 border rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                            placeholder="Add a comment..."
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                            disabled={isSubmittingComment}
+                      {editedPostImagePreview || selectedPost.has_image ? (
+                        <>
+                          <img
+                            src={
+                              editedPostImagePreview ||
+                              getImageUrl(
+                                selectedPost.id,
+                                selectedPost.has_image || false
+                              )
+                            }
+                            alt={selectedPost.title}
+                            className="w-full h-64 object-cover rounded-md mb-3 shadow-sm"
                           />
                           <button
-                            type="submit"
-                            className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={isSubmittingComment || !newComment.trim()}
+                            type="button"
+                            onClick={() => removeImage(true)}
+                            className="absolute top-6 right-6 bg-red-600 text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-red-700 transition-all duration-200 text-xl font-bold"
+                            aria-label="Remove image"
                           >
-                            {isSubmittingComment ? "Posting..." : "Post"}
+                            &times;
                           </button>
-                        </form>
-                      </div>
+                        </>
+                      ) : (
+                        <p className="text-gray-500">
+                          Drag & drop an image here, or click to select one
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <img
+                        src={getImageUrl(
+                          selectedPost.id,
+                          selectedPost.has_image || false
+                        )}
+                        alt={selectedPost.title}
+                        className="w-full h-72 object-cover rounded-lg shadow-md"
+                      />
+                      {selectedPost.category && (
+                        <span className="absolute top-3 left-3 bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+                          {selectedPost.category}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
 
-                {/* Modal Actions */}
-                <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                {/* Title */}
+                <div>
+                  <label
+                    htmlFor="post-title"
+                    className="block text-sm font-semibold text-gray-700 mb-2"
+                  >
+                    Title
+                  </label>
                   {isEditMode ? (
-                    <>
-                      <button
-                        onClick={handleCancelEdit}
-                        className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
-                        disabled={isUpdatingPost}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleSaveEdit}
-                        className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={isUpdatingPost}
-                      >
-                        {isUpdatingPost ? "Saving..." : "Save Changes"}
-                      </button>
-                    </>
+                    <input
+                      id="post-title"
+                      type="text"
+                      value={editedPost?.title || ""}
+                      onChange={(e) =>
+                        setEditedPost((prev) =>
+                          prev ? { ...prev, title: e.target.value } : null
+                        )
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all duration-200 text-lg"
+                      placeholder="Enter post title"
+                    />
                   ) : (
-                    <>
-                      <button
-                        onClick={closeModal}
-                        className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
-                      >
-                        Close
-                      </button>
-                      <button
-                        onClick={handleDeletePost}
-                        className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={isDeletingPost}
-                      >
-                        {isDeletingPost ? "Deleting..." : "Delete Post"}
-                      </button>
-                      <button
-                        onClick={handleEditPost}
-                        className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
-                      >
-                        Edit Post
-                      </button>
-                    </>
+                    <p className="text-gray-900 font-bold text-2xl">
+                      {selectedPost.title}
+                    </p>
                   )}
                 </div>
+
+                {/* Date Posted */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Date Posted
+                  </label>
+                  <p className="text-gray-700 text-sm">
+                    {new Date(selectedPost.time).toLocaleString()}
+                  </p>
+                </div>
+
+                {/* Content */}
+                <div>
+                  <label
+                    htmlFor="post-content"
+                    className="block text-sm font-semibold text-gray-700 mb-2"
+                  >
+                    Content
+                  </label>
+                  {isEditMode ? (
+                    <textarea
+                      id="post-content"
+                      value={editedPost?.paragraph || ""}
+                      onChange={(e) =>
+                        setEditedPost((prev) =>
+                          prev ? { ...prev, paragraph: e.target.value } : null
+                        )
+                      }
+                      rows={6}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all duration-200 text-base resize-y"
+                      placeholder="Write your post content here..."
+                    />
+                  ) : (
+                    <p className="text-gray-800 leading-relaxed text-base">
+                      {selectedPost.paragraph}
+                    </p>
+                  )}
+                </div>
+
+                {/* Category (Edit Mode) */}
+                {isEditMode && (
+                  <div>
+                    <label
+                      htmlFor="post-category"
+                      className="block text-sm font-semibold text-gray-700 mb-2"
+                    >
+                      Category (Optional)
+                    </label>
+                    <input
+                      id="post-category"
+                      type="text"
+                      value={editedPost?.category || ""}
+                      onChange={(e) =>
+                        setEditedPost((prev) =>
+                          prev ? { ...prev, category: e.target.value } : null
+                        )
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all duration-200 text-base"
+                      placeholder="Enter category (e.g., family, work, travel)..."
+                    />
+                  </div>
+                )}
+
+                {/* Likes */}
+                {!isEditMode && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Likes
+                    </label>
+                    <button
+                      className={`flex items-center gap-2 text-xl font-medium focus:outline-none transition-all duration-200 ${
+                        selectedPost.likes > 0
+                          ? "text-pink-600 animate-pulse"
+                          : "text-gray-400"
+                      } hover:scale-105 transform`}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPost((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                likes: prev.likes + 1,
+                              }
+                            : prev
+                        );
+                        setPosts((prevPosts) =>
+                          prevPosts.map((post) =>
+                            post.id === selectedPost.id
+                              ? { ...post, likes: post.likes + 1 }
+                              : post
+                          )
+                        );
+                        fetch(`/api/admin/posts/likes`, {
+                          method: "PUT",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({
+                            id: selectedPost.id,
+                          }),
+                        }).catch((err) => {
+                          console.error("Error updating likes:", err);
+                        });
+                      }}
+                      aria-label={`Like this post, current likes: ${selectedPost.likes}`}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill={selectedPost.likes > 0 ? "currentColor" : "none"}
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        className="w-7 h-7"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z"
+                        />
+                      </svg>
+                      <span className="text-lg">{selectedPost.likes}</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Comment Section (View Mode) */}
+                {!isEditMode && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Comments
+                    </label>
+
+                    {/* Comments List */}
+                    <div className="space-y-3 mb-4 p-3 bg-gray-50 rounded-lg max-h-60 overflow-y-auto border border-gray-200">
+                      {isLoadingComments ? (
+                        <div className="text-gray-500 text-sm text-center py-4">
+                          Loading comments...
+                        </div>
+                      ) : comments.length === 0 ? (
+                        <div className="text-gray-500 text-sm text-center py-4">
+                          No comments yet. Be the first to comment!
+                        </div>
+                      ) : (
+                        comments.map((comment) => (
+                          <div
+                            key={comment.id}
+                            className="bg-white rounded-md p-3 shadow-sm border border-gray-100"
+                          >
+                            <p className="text-gray-800 text-sm">
+                              {comment.content}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Add Comment Form */}
+                    <form onSubmit={submitComment} className="flex gap-3">
+                      <input
+                        type="text"
+                        className="flex-1 border border-gray-300 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all duration-200"
+                        placeholder="Add a comment..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        disabled={isSubmittingComment}
+                        aria-label="New comment content"
+                      />
+                      <button
+                        type="submit"
+                        className="bg-yellow-500 text-white px-5 py-2 rounded-md hover:bg-yellow-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                        disabled={isSubmittingComment || !newComment.trim()}
+                      >
+                        {isSubmittingComment ? "Posting..." : "Post"}
+                      </button>
+                    </form>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex justify-end gap-4 mt-6 pt-5 border-t border-gray-200">
+                {isEditMode ? (
+                  <>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="px-6 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors duration-200 font-medium"
+                      disabled={isUpdatingPost}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveEdit}
+                      className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-md"
+                      disabled={isUpdatingPost}
+                    >
+                      {isUpdatingPost ? "Saving..." : "Save Changes"}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={closeModal}
+                      className="px-6 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors duration-200 font-medium"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={handleDeletePost}
+                      className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-md"
+                      disabled={isDeletingPost}
+                    >
+                      {isDeletingPost ? "Deleting..." : "Delete Post"}
+                    </button>
+                    <button
+                      onClick={handleEditPost}
+                      className="px-6 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors duration-200 font-semibold shadow-md"
+                    >
+                      Edit Post
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
