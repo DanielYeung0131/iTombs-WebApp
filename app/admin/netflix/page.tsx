@@ -204,7 +204,7 @@ export default function NetflixStylePosts() {
             </h1>
             <nav className="hidden md:flex space-x-6">
               <button
-                onClick={() => router.push(`/admin?user=${userId}`)}
+                onClick={() => router.push(`/admin/dashboard?user=${userId}`)}
                 className="text-gray-300 hover:text-white transition-colors"
               >
                 Dashboard
