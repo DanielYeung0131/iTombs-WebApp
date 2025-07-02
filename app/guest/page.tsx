@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-// Interface for a Post object
 interface Post {
   id: number;
   title: string;
@@ -12,10 +11,9 @@ interface Post {
   likes: number;
   has_image?: boolean;
   image_mime_type?: string;
-  category?: string | null;
+  category?: string | null; // Make it explicitly nullable
 }
 
-// Interface for a User object
 interface User {
   id: number;
   has_icon?: boolean;
@@ -26,19 +24,18 @@ interface User {
   gender: string;
   address: string;
   intro: string;
-  has_background?: boolean;
-  background_mime_type?: string;
+  has_background?: boolean; // Add this field
+  background_mime_type?: string; // Add this field
 }
 
-// Interface for a Comment object
 interface Comment {
   id: number;
   post_id: number;
   content: string;
 }
 
-// The main component for the view-only dashboard
-export default function ViewOnlyDashboard() {
+export default function GuestView() {
+  // Renamed AdminDashboard to GuestView
   const [userId, setUserId] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState("");
@@ -47,11 +44,27 @@ export default function ViewOnlyDashboard() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState("");
   const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  // Removed states related to post creation/editing/deletion
+  // const [isEditMode, setIsEditMode] = useState(false);
+  // const [editedPost, setEditedPost] = useState<Post | null>(null);
+  // const [isUpdatingPost, setIsUpdatingPost] = useState(false);
+  // const [isDeletingPost, setIsDeletingPost] = useState(false);
+  // const [newPostImage, setNewPostImage] = useState<File | null>(null);
+  // const [newPostImagePreview, setNewPostImagePreview] = useState<string>("");
+  // const [editedPostImage, setEditedPostImage] = useState<File | null>(null);
+  // const [editedPostImagePreview, setEditedPostImagePreview] = useState<string>("");
+  // const [isUploadingBackground, setIsUploadingBackground] = useState(false);
+  // const [backgroundUploadInput, setBackgroundUploadInput] = useState<HTMLInputElement | null>(null);
+  // const [isAddPostModalOpen, setIsAddPostModalOpen] = useState(false);
+  // const [newPost, setNewPost] = useState({ title: "", paragraph: "", category: "" });
+  // const [isCreatingPost, setIsCreatingPost] = useState(false);
 
   const router = useRouter();
 
-  // Effect to get the user ID from the URL search parameters
   useEffect(() => {
     if (typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
@@ -59,7 +72,6 @@ export default function ViewOnlyDashboard() {
     }
   }, []);
 
-  // Effect to fetch posts when the userId is available
   useEffect(() => {
     const fetchPosts = async () => {
       if (!userId) {
@@ -80,7 +92,6 @@ export default function ViewOnlyDashboard() {
     if (userId) fetchPosts();
   }, [userId]);
 
-  // Effect to fetch user data when the userId is available
   useEffect(() => {
     const fetchUser = async () => {
       if (!userId) {
@@ -92,8 +103,8 @@ export default function ViewOnlyDashboard() {
         const res = await fetch(`/api/admin/users?user=${parseInt(userId)}`);
         if (!res.ok) throw new Error("Failed to fetch user");
         const data = await res.json();
+        console.log("Fetched user data:", data.user);
         const user = data.user;
-        // Format dates for display
         if (user.birthday) {
           user.birthday = user.birthday.split("T")[0];
         }
@@ -109,28 +120,34 @@ export default function ViewOnlyDashboard() {
     if (userId) fetchUser();
   }, [userId]);
 
-  // Helper function to get the URL for a post's image
   const getImageUrl = (postId: number, hasImage: boolean) => {
     return hasImage
       ? `/api/admin/posts/images?postId=${postId}`
       : "/placeholder-icon.jpg";
   };
 
-  // Helper function to get the URL for a user's icon
   const getUserIconUrl = (userId: number, hasIcon: boolean) => {
     return hasIcon
       ? `/api/admin/users/icon?userId=${userId}`
       : "/placeholder-icon.jpg";
   };
 
-  // Helper function to get the URL for a user's background image
   const getUserBackgroundUrl = (userId: number, hasBackground: boolean) => {
     return hasBackground
       ? `/api/admin/users/background?userId=${userId}`
       : null;
   };
 
-  // Fetches comments for a given post
+  // Removed handleBackgroundUpload and related states/functions
+  // const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => { /* ... */ };
+  // const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => { /* ... */ };
+  // const removeImage = (isEdit = false) => { /* ... */ };
+  // const handleCreatePost = async (e: React.FormEvent) => { /* ... */ };
+  // const handleEditPost = () => { /* ... */ };
+  // const handleCancelEdit = () => { /* ... */ };
+  // const handleSaveEdit = async () => { /* ... */ };
+  // const handleDeletePost = async () => { /* ... */ };
+
   const fetchComments = async (postId: number) => {
     setIsLoadingComments(true);
     try {
@@ -146,18 +163,59 @@ export default function ViewOnlyDashboard() {
     }
   };
 
-  // Opens the post detail modal
+  const submitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPost || !newComment.trim()) return;
+
+    setIsSubmittingComment(true);
+    try {
+      const res = await fetch("/api/admin/posts/comments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          postId: selectedPost.id,
+          content: newComment.trim(),
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to submit comment");
+
+      const data = await res.json();
+      setComments((prev) => [data.comment, ...prev]);
+      setNewComment("");
+    } catch (err: any) {
+      console.error("Error submitting comment:", err);
+      alert("Failed to submit comment. Please try again.");
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
   const handlePostClick = (post: Post) => {
     setSelectedPost(post);
     setIsModalOpen(true);
     fetchComments(post.id);
   };
 
-  // Closes the post detail modal
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedPost(null);
     setComments([]);
+    setNewComment("");
+    // Removed edit mode related state resets
+    // setIsEditMode(false);
+    // setEditedPost(null);
+    // setEditedPostImage(null);
+    // setEditedPostImagePreview("");
+  };
+
+  // Removed closeAddPostModal and related states/functions
+  // const closeAddPostModal = () => { /* ... */ };
+
+  const handleLogout = () => {
+    router.push("/");
   };
 
   const tabs = ["Timeline", "Bio", "Media", "Family Tree"];
@@ -168,7 +226,7 @@ export default function ViewOnlyDashboard() {
       <div
         className="max-w-2xl mx-auto p-6 rounded-xl shadow-lg text-center relative overflow-hidden"
         style={
-          user?.has_background && user.id
+          user?.has_background
             ? {
                 backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url(${getUserBackgroundUrl(
                   user.id,
@@ -181,14 +239,55 @@ export default function ViewOnlyDashboard() {
             : { background: "white" }
         }
       >
+        {/* Background Upload Button - Removed */}
+        {/* <div className="absolute top-4 right-4">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleBackgroundUpload}
+            className="hidden"
+            ref={(input) => setBackgroundUploadInput(input)}
+            id="background-upload"
+            disabled={isUploadingBackground}
+          />
+          <label
+            htmlFor="background-upload"
+            className={`cursor-pointer bg-white/80 hover:bg-white/90 p-2 rounded-full shadow-md transition-all duration-200 flex items-center justify-center ${
+              isUploadingBackground
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:scale-105"
+            }`}
+            title="Upload background image"
+          >
+            {isUploadingBackground ? (
+              <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-5 h-5 text-gray-600"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+                />
+              </svg>
+            )}
+          </label>
+        </div> */}
+
         <img
           src={
-            user?.has_icon && user.id
+            user?.has_icon
               ? getUserIconUrl(user.id, user.has_icon)
               : "/placeholder-icon.jpg"
           }
           alt={user?.name ? `${user.name}'s User Icon` : "User Icon"}
-          className="w-32 h-32 rounded-full mx-auto border-4 border-blue-200 shadow-md object-cover ring-2 ring-blue-100 ring-offset-2"
+          className="w-32 h-32 rounded-full mx-auto border-4 border-blue-200 shadow-md object-cover transition-transform duration-300 hover:scale-105 hover:shadow-xl ring-2 ring-blue-100 ring-offset-2"
         />
 
         <h1 className="text-3xl font-extrabold mt-5 text-gray-800 tracking-tight">
@@ -202,7 +301,7 @@ export default function ViewOnlyDashboard() {
           {user?.gender} &bull; {user?.address}
         </p>
 
-        {/* Action Buttons */}
+        {/* Action Buttons - "Settings" button removed */}
         <div className="flex justify-center gap-4 mt-4">
           <button className="border px-4 py-2 rounded-full text-sm text-yellow-700 border-yellow-500 hover:bg-yellow-200 hover:border-yellow-600 shadow-md transition-all duration-200 ease-in-out transform hover:scale-105">
             ♡ Favorite
@@ -211,7 +310,7 @@ export default function ViewOnlyDashboard() {
             className="border px-4 py-2 rounded-full text-sm text-yellow-700 border-yellow-500 hover:bg-yellow-200 hover:border-yellow-600 shadow-md transition-all duration-200 ease-in-out transform hover:scale-105"
             onClick={() => {
               if (user?.id) {
-                const url = `https://itombs.vercel.app/guest?user=${user.id}`;
+                const url = `https://itombs.vercel.app/guest?user=${user.id}`; // Changed to /guest
                 navigator.clipboard.writeText(url).then(() => {
                   alert("Share link copied to clipboard!");
                 });
@@ -220,6 +319,14 @@ export default function ViewOnlyDashboard() {
           >
             🔄 Share
           </button>
+          {/* <button
+            className="border px-4 py-2 rounded-full text-sm text-yellow-700 border-yellow-500 hover:bg-yellow-200 hover:border-yellow-600 shadow-md transition-all duration-200 ease-in-out transform hover:scale-105"
+            onClick={() =>
+              router.push("/admin/settings" + (userId ? `?user=${userId}` : ""))
+            }
+          >
+            📝 Settings
+          </button> */}
         </div>
       </div>
 
@@ -230,7 +337,7 @@ export default function ViewOnlyDashboard() {
             <button
               key={tab}
               onClick={() => setActiveTab(idx)}
-              className="flex-1 py-2 mx-1 rounded-lg transition-colors duration-150 
+              className="flex-1 py-2 mx-1 rounded-lg transition-colors duration-150
             text-gray-600 font-semibold hover:bg-yellow-100 hover:text-yellow-700 focus:outline-none"
               style={{
                 borderBottom:
@@ -247,7 +354,19 @@ export default function ViewOnlyDashboard() {
         </div>
       </div>
 
-      {/* Timeline Posts - Only show when Timeline tab is active */}
+      {/* Add Post Button - Removed */}
+      {/* {activeTab === 0 && (
+        <div className="max-w-2xl mx-auto mt-4">
+          <button
+            onClick={() => setIsAddPostModalOpen(true)}
+            className="w-full bg-yellow-500 text-white py-3 px-4 rounded-lg hover:bg-yellow-600 transition-colors font-semibold shadow-md"
+          >
+            + Add New Post
+          </button>
+        </div>
+      )} */}
+
+      {/* Media Posts - Only show when Timeline tab is active */}
       {activeTab === 0 && (
         <div className="max-w-4xl mx-auto mt-6 px-4">
           {error && <p className="text-red-500 mb-4">{error}</p>}
@@ -255,25 +374,28 @@ export default function ViewOnlyDashboard() {
             <p className="text-gray-500 text-center">No posts available.</p>
           ) : (
             <div className="relative">
-              {/* Timeline line */}
+              {/* Timeline line - positioned more left of center */}
               <div className="absolute inset-y-0 left-6 md:left-[26%] w-1 bg-gradient-to-b from-blue-400 via-purple-500 to-pink-500"></div>
 
               {posts.map((post) => (
                 <div key={post.id} className="relative mb-12 last:mb-0">
-                  {/* Timeline dot */}
+                  {/* Timeline dot - positioned to match the line */}
                   <div className="absolute left-6 md:left-[26.25%] -translate-x-1/2 w-4 h-4 bg-white border-4 border-blue-500 rounded-full shadow-lg z-10"></div>
 
+                  {/* Responsive layout */}
                   <div className="flex md:justify-start md:even:justify-end">
                     <div className="w-full md:w-[32%] pl-12 md:pl-0 md:odd:pl-8 md:even:pr-8 md:odd:mr-[30%] md:even:ml-[30%]">
                       <div className="group">
                         <div
                           className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer transform transition-all duration-300 overflow-hidden border border-gray-100 mx-auto md:mx-0"
                           style={{
+                            // width: "clamp(280px, 25vw, 400px)",
                             minWidth: "310px",
                             maxWidth: "460px",
                           }}
                           onClick={() => handlePostClick(post)}
                         >
+                          {/* Date badge - responsive positioning */}
                           <div className="absolute top-2 left-10 md:left-[calc(26%+1rem)] bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow z-10 group-hover:opacity-100 opacity-80 transition-opacity duration-200">
                             {new Date(post.time).toLocaleDateString("en-US", {
                               month: "short",
@@ -282,6 +404,7 @@ export default function ViewOnlyDashboard() {
                             })}
                           </div>
 
+                          {/* Image */}
                           <div className="relative overflow-hidden">
                             <img
                               src={getImageUrl(
@@ -294,6 +417,7 @@ export default function ViewOnlyDashboard() {
                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                           </div>
 
+                          {/* Content */}
                           <div className="p-4 md:p-3">
                             <h3 className="text-lg md:text-base font-bold text-gray-800 mb-2 md:mb-1 group-hover:text-blue-600 transition-colors duration-200 line-clamp-2 md:line-clamp-1">
                               {post.title}
@@ -310,6 +434,7 @@ export default function ViewOnlyDashboard() {
                               </div>
                             )}
 
+                            {/* Footer */}
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-2 md:space-x-1 text-pink-500">
                                 <span className="text-lg md:text-base">❤️</span>
@@ -336,7 +461,7 @@ export default function ViewOnlyDashboard() {
         </div>
       )}
 
-      {/* Bio Tab Content */}
+      {/* Content for other tabs */}
       {activeTab === 1 && (
         <div className="max-w-2xl mx-auto mt-6 bg-white p-8 rounded-xl shadow flex flex-col items-center">
           <h2 className="text-2xl font-bold mb-2 text-yellow-600">Bio</h2>
@@ -355,7 +480,6 @@ export default function ViewOnlyDashboard() {
         </div>
       )}
 
-      {/* Media Tab Content */}
       {activeTab === 2 && (
         <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
           <div className="flex items-center justify-between mb-4">
@@ -369,7 +493,7 @@ export default function ViewOnlyDashboard() {
             </div>
             <a
               href={
-                user ? `/admin/netflix?userid=${user.id}` : "/admin/netflix"
+                user ? `/admin/netflix?userid=${user.id}` : "/admin/netflix" // You might want to change this path for guests
               }
               className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-red-600 via-red-500 to-pink-500 text-white rounded-full shadow-lg hover:from-red-700 hover:to-pink-600 transition-all font-semibold text-sm border border-red-400 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-400"
               style={{
@@ -415,7 +539,6 @@ export default function ViewOnlyDashboard() {
         </div>
       )}
 
-      {/* Family Tree Tab Content */}
       {activeTab === 3 && (
         <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
           <div className="flex flex-col items-center mb-8">
@@ -427,13 +550,13 @@ export default function ViewOnlyDashboard() {
             </div>
             <div className="w-24 h-1 bg-gradient-to-r from-emerald-300 via-teal-300 to-cyan-300 rounded-full mb-2"></div>
             <p className="text-gray-600 text-center max-w-md">
-              Explore the family lineage and connections. Click below to view
-              the full family tree.
+              Explore the family lineage and connections. Click below to view or
+              edit the full family tree.
             </p>
           </div>
           <div className="flex justify-center">
             <a
-              href={user ? `/guest/tree?userid=${user.id}` : "#"}
+              href={user ? `/guest/tree?userid=${user.id}` : "#"} // You might want to change this path for guests
               className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 text-white rounded-full shadow-lg hover:from-emerald-500 hover:to-cyan-600 transition-all font-semibold text-lg gap-2 border-2 border-emerald-300 hover:scale-105"
             >
               <span className="text-2xl">🌳</span>
@@ -443,11 +566,136 @@ export default function ViewOnlyDashboard() {
         </div>
       )}
 
-      {/* Post Detail Modal (View-Only) */}
+      {/* Add Post Modal - Removed */}
+      {/* {isAddPostModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-20">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  Add New Post
+                </h2>
+                <button
+                  onClick={closeAddPostModal}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleCreatePost} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Post Image (Optional)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload(e, false)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  />
+                  {newPostImagePreview && (
+                    <div className="mt-2 relative">
+                      <img
+                        src={newPostImagePreview}
+                        alt="Preview"
+                        className="w-full h-48 object-cover rounded-md"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(false)}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Post Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={newPost.title}
+                    onChange={(e) =>
+                      setNewPost((prev) => ({ ...prev, title: e.target.value }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    placeholder="Enter post title..."
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Post Content *
+                  </label>
+                  <textarea
+                    value={newPost.paragraph}
+                    onChange={(e) =>
+                      setNewPost((prev) => ({
+                        ...prev,
+                        paragraph: e.target.value,
+                      }))
+                    }
+                    rows={6}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    placeholder="Write your post content here..."
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Category (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={newPost.category}
+                    onChange={(e) =>
+                      setNewPost((prev) => ({
+                        ...prev,
+                        category: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    placeholder="Enter category (e.g., family, work, travel)..."
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={closeAddPostModal}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                    disabled={isCreatingPost}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={
+                      isCreatingPost ||
+                      !newPost.title.trim() ||
+                      !newPost.paragraph.trim()
+                    }
+                  >
+                    {isCreatingPost ? "Creating..." : "Create Post"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )} */}
+
+      {/* Post Detail Modal */}
       {isModalOpen && selectedPost && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-20">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
+              {/* Modal Header */}
               <div className="flex justify-between items-start mb-4">
                 <h2 className="text-2xl font-bold text-gray-800">
                   Post Details
@@ -460,6 +708,7 @@ export default function ViewOnlyDashboard() {
                 </button>
               </div>
 
+              {/* Post Content - Simplified for view-only */}
               <div className="space-y-3">
                 <img
                   src={getImageUrl(
@@ -512,12 +761,41 @@ export default function ViewOnlyDashboard() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Likes
                     </label>
-                    <div
-                      className={`flex items-center gap-1 text-lg font-medium ${
+                    <button
+                      className={`flex items-center gap-1 text-lg font-medium focus:outline-none transition-colors ${
                         selectedPost.likes > 0
                           ? "text-pink-500"
                           : "text-gray-400"
-                      }`}
+                      } hover:scale-110`}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPost((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                likes: prev.likes + 1,
+                              }
+                            : prev
+                        );
+                        setPosts((prevPosts) =>
+                          prevPosts.map((post) =>
+                            post.id === selectedPost.id
+                              ? { ...post, likes: post.likes + 1 }
+                              : post
+                          )
+                        );
+                        fetch(`/api/admin/posts/likes`, {
+                          method: "PUT",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({
+                            id: selectedPost.id,
+                          }),
+                        }).catch((err) => {
+                          console.error("Error updating likes:", err);
+                        });
+                      }}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -534,13 +812,16 @@ export default function ViewOnlyDashboard() {
                         />
                       </svg>
                       <span className="text-base">{selectedPost.likes}</span>
-                    </div>
+                    </button>
                   </div>
 
+                  {/* Comment Section - Remains active */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Comments
                     </label>
+
+                    {/* Comments List */}
                     <div className="space-y-2 mb-2 max-h-60 overflow-y-auto">
                       {isLoadingComments ? (
                         <div className="text-gray-500 text-sm">
@@ -548,7 +829,7 @@ export default function ViewOnlyDashboard() {
                         </div>
                       ) : comments.length === 0 ? (
                         <div className="text-gray-500 text-sm">
-                          No comments yet.
+                          No comments yet. Be the first to comment!
                         </div>
                       ) : (
                         comments.map((comment) => (
@@ -563,9 +844,29 @@ export default function ViewOnlyDashboard() {
                         ))
                       )}
                     </div>
+
+                    {/* Add Comment Form */}
+                    <form className="flex gap-2 mt-2" onSubmit={submitComment}>
+                      <input
+                        type="text"
+                        className="flex-1 border rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        placeholder="Add a comment..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        disabled={isSubmittingComment}
+                      />
+                      <button
+                        type="submit"
+                        className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isSubmittingComment || !newComment.trim()}
+                      >
+                        {isSubmittingComment ? "Posting..." : "Post"}
+                      </button>
+                    </form>
                   </div>
                 </div>
 
+                {/* Modal Actions - Only "Close" button remains */}
                 <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
                   <button
                     onClick={closeModal}
@@ -573,12 +874,36 @@ export default function ViewOnlyDashboard() {
                   >
                     Close
                   </button>
+                  {/* Edit and Delete Post buttons removed */}
+                  {/* <button
+                    onClick={handleDeletePost}
+                    className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isDeletingPost}
+                  >
+                    {isDeletingPost ? "Deleting..." : "Delete Post"}
+                  </button>
+                  <button
+                    onClick={handleEditPost}
+                    className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                  >
+                    Edit Post
+                  </button> */}
                 </div>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Logout button removed - Guests don't "log out" from a view-only page */}
+      {/* <div className="flex justify-center mt-10">
+        <button
+          onClick={handleLogout}
+          className="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600"
+        >
+          Logout
+        </button>
+      </div> */}
     </div>
   );
 }
