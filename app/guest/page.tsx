@@ -493,7 +493,7 @@ export default function GuestView() {
             </div>
             <a
               href={
-                user ? `/admin/netflix?userid=${user.id}` : "/admin/netflix" // You might want to change this path for guests
+                user ? `/guest/netflix?userid=${user.id}` : "/guest/netflix" // You might want to change this path for guests
               }
               className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-red-600 via-red-500 to-pink-500 text-white rounded-full shadow-lg hover:from-red-700 hover:to-pink-600 transition-all font-semibold text-sm border border-red-400 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-400"
               style={{
