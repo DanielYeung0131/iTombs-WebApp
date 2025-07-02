@@ -332,20 +332,23 @@ export default function GuestView() {
 
       {/* Tabs */}
       <div className="max-w-2xl mx-auto mt-8">
-        <div className="flex justify-between bg-white rounded-xl shadow p-2 mb-2">
+        <div className="flex justify-center gap-2 bg-gradient-to-r from-yellow-100 via-white to-blue-100 rounded-xl shadow-lg p-2 mb-6">
           {tabs.map((tab, idx) => (
             <button
               key={tab}
               onClick={() => setActiveTab(idx)}
-              className="flex-1 py-2 mx-1 rounded-lg transition-colors duration-150
-            text-gray-600 font-semibold hover:bg-yellow-100 hover:text-yellow-700 focus:outline-none"
+              className={`flex-1 py-2 mx-1 rounded-lg font-semibold transition-all duration-200
+              ${
+                idx === activeTab
+                  ? "bg-gradient-to-r from-yellow-300 via-yellow-100 to-yellow-200 text-yellow-800 shadow-lg scale-105"
+                  : "bg-transparent text-gray-600 hover:bg-yellow-50 hover:text-yellow-700"
+              }
+              focus:outline-none focus:ring-2 focus:ring-yellow-400`}
               style={{
                 borderBottom:
                   idx === activeTab
                     ? "3px solid #F59E42"
                     : "3px solid transparent",
-                background: idx === activeTab ? "#FFF7E6" : "transparent",
-                color: idx === activeTab ? "#F59E42" : undefined,
               }}
             >
               {tab}
@@ -463,19 +466,43 @@ export default function GuestView() {
 
       {/* Content for other tabs */}
       {activeTab === 1 && (
-        <div className="max-w-2xl mx-auto mt-6 bg-white p-8 rounded-xl shadow flex flex-col items-center">
-          <h2 className="text-2xl font-bold mb-2 text-yellow-600">Bio</h2>
-          <div className="w-20 h-1 bg-yellow-300 rounded-full mb-6"></div>
-          <div className="w-full text-center">
-            <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-line">
-              {user?.intro ? (
-                user.intro
-              ) : (
-                <span className="italic text-gray-400">
+        <div className="max-w-2xl mx-auto mt-6 bg-gradient-to-br from-yellow-50 via-white to-blue-50 p-8 rounded-2xl shadow-xl flex flex-col items-center">
+          <div className="flex flex-col items-center mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-3xl">📝</span>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-yellow-700 tracking-tight drop-shadow">
+                Biography
+              </h2>
+            </div>
+            <div className="w-24 h-1 bg-gradient-to-r from-yellow-300 via-yellow-200 to-blue-200 rounded-full mb-2"></div>
+          </div>
+          <div className="w-full max-w-xl mx-auto text-center">
+            {user?.intro && user.intro.trim() ? (
+              <blockquote className="relative bg-white/80 p-6 rounded-xl shadow-inner border border-yellow-100 text-gray-800 text-lg md:text-xl leading-relaxed whitespace-pre-line font-serif italic">
+                <svg
+                  className="absolute -top-4 left-4 w-8 h-8 text-yellow-300 opacity-60"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M7.17 6A5.001 5.001 0 002 11c0 2.21 1.79 4 4 4a1 1 0 010 2c-3.31 0-6-2.69-6-6a7 7 0 017-7 1 1 0 010 2zm10 0A5.001 5.001 0 0012 11c0 2.21 1.79 4 4 4a1 1 0 010 2c-3.31 0-6-2.69-6-6a7 7 0 017-7 1 1 0 010 2z" />
+                </svg>
+                {user.intro}
+                <svg
+                  className="absolute -bottom-4 right-4 w-8 h-8 text-yellow-300 opacity-60 rotate-180"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M7.17 6A5.001 5.001 0 002 11c0 2.21 1.79 4 4 4a1 1 0 010 2c-3.31 0-6-2.69-6-6a7 7 0 017-7 1 1 0 010 2zm10 0A5.001 5.001 0 0012 11c0 2.21 1.79 4 4 4a1 1 0 010 2c-3.31 0-6-2.69-6-6a7 7 0 017-7 1 1 0 010 2z" />
+                </svg>
+              </blockquote>
+            ) : (
+              <div className="flex flex-col items-center">
+                <span className="text-5xl text-gray-300 mb-2">😶</span>
+                <span className="italic text-gray-400 text-lg">
                   No biography provided yet.
                 </span>
-              )}
-            </p>
+              </div>
+            )}
           </div>
         </div>
       )}
