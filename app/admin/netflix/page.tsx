@@ -201,7 +201,10 @@ export default function NetflixStylePosts() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black via-black/80 to-transparent">
         <div className="flex items-center justify-between px-8 py-4">
           <div className="flex items-center space-x-8">
-            <h1 className="text-red-600 font-bold text-2xl tracking-wider">
+            <h1
+              className="text-red-600 font-bold text-2xl tracking-wider cursor-pointer"
+              onClick={() => router.push(`/admin/dashboard?user=${userId}`)}
+            >
               iTOMBS
             </h1>
             <nav className="hidden md:flex space-x-6">

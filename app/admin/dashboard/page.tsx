@@ -709,27 +709,23 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-xl font-semibold mb-1">Media</h2>
-              <p className="text-gray-600">
-                Click on any image to view details.
-              </p>
+              <p className="text-gray-600">Click to view details.</p>
             </div>
             <a
               href={
                 user ? `/admin/netflix?userid=${user.id}` : "/admin/netflix"
               }
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-red-600 via-red-500 to-pink-500 text-white rounded-full shadow-lg hover:from-red-700 hover:to-pink-600 transition-all font-semibold text-base border-2 border-red-400 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-400"
-              target="_blank"
-              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-red-600 via-red-500 to-pink-500 text-white rounded-full shadow-lg hover:from-red-700 hover:to-pink-600 transition-all font-semibold text-sm border border-red-400 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-400"
               style={{
-                boxShadow: "0 4px 16px 0 rgba(220,38,38,0.15)",
-                letterSpacing: "0.02em",
+                boxShadow: "0 2px 8px 0 rgba(220,38,38,0.12)",
+                letterSpacing: "0.01em",
               }}
             >
-              <span className="text-lg">🎬</span>
-              <span>Go to Netflix Page</span>
+              <span className="text-base">🎬</span>
+              <span>Netflix Page</span>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
+                className="h-3 w-3"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
