@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { User, X, ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { User, X, ArrowLeft } from "lucide-react";
 
 interface TreeNode {
   tree_id: number;
@@ -9,12 +9,6 @@ interface TreeNode {
   relative_name: string;
   relationship: string;
   profile_url?: string;
-}
-
-interface NewRelative {
-  relativeName: string;
-  relationship: string;
-  profileUrl: string;
 }
 
 interface GraphNode {
@@ -33,9 +27,6 @@ interface GraphEdge {
 }
 
 export default function FamilyTreeVisualization() {
-  // Get userId from URL params (you can modify this based on your routing setup)
-  // Get userId from the route (e.g., /admin/tree/[userId])
-
   const [userId, setUserId] = useState("");
 
   useEffect(() => {
@@ -49,29 +40,15 @@ export default function FamilyTreeVisualization() {
 
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
-  const [newRelative, setNewRelative] = useState<NewRelative>({
-    relativeName: "",
-    relationship: "",
-    profileUrl: "",
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [draggedNode, setDraggedNode] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   const [svgDimensions, setSvgDimensions] = useState({
-    width:
-      typeof window !== "undefined"
-        ? window.innerWidth + (window.innerWidth < 700 ? 100 : 0)
-        : 800, // Initialize with window.innerWidth if available, otherwise a default
-    height: typeof window !== "undefined" ? window.innerHeight - 300 : 400, // Initialize with window.innerHeight if available, otherwise a default
+    width: 800,
+    height: 400,
   });
 
-  const windowWidth = typeof window !== "undefined" ? window.innerWidth : 1024;
-  const isMobileView = windowWidth < 768;
-  const [isMobile, setIsMobile] = useState(isMobileView);
+  const [isMobile, setIsMobile] = useState(false);
 
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -87,8 +64,13 @@ export default function FamilyTreeVisualization() {
 
         setIsMobile(isMobileView);
 
-        const width = Math.min(containerWidth - 32, isMobileView ? 400 : 800);
-        const height = isMobileView ? 500 : 600;
+        // Adjust width based on container, ensuring it doesn't exceed a max for larger screens
+        // and is more constrained for mobile.
+        const width = Math.min(
+          containerWidth,
+          isMobileView ? windowWidth - 40 : 1000
+        ); // Max width for desktop
+        const height = isMobileView ? 500 : 600; // Fixed height, adjust as needed
 
         setSvgDimensions({ width, height });
       }
@@ -135,9 +117,9 @@ export default function FamilyTreeVisualization() {
     const nodes: GraphNode[] = [];
     const edges: GraphEdge[] = [];
 
-    const centerX = (svgDimensions.width - (isMobile ? 100 : 50)) / 2;
+    // Calculate center based on current SVG dimensions
+    const centerX = svgDimensions.width / 2;
     const centerY = svgDimensions.height / 2;
-    const baseRadius = isMobile ? 80 : 150;
 
     // Always create root node
     const rootNode = data.find((n) => n.relationship === "self");
@@ -156,55 +138,83 @@ export default function FamilyTreeVisualization() {
       return { nodes, edges };
     }
 
-    // Position other nodes in layers around the root
+    // Define layers and distances for relationships
     const relationshipLayers = {
-      spouse: { angle: 0, distance: isMobile ? 120 : 160 },
-      parent: { angle: -90, distance: isMobile ? 120 : 220 },
-      child: { angle: 90, distance: isMobile ? 120 : 220 },
-      sibling: { angle: 180, distance: isMobile ? 100 : 180 },
-      grandparent: { angle: -125, distance: isMobile ? 190 : 280 },
-      grandchild: { angle: 90, distance: isMobile ? 190 : 280 },
-      aunt: { angle: -135, distance: isMobile ? 130 : 240 },
-      uncle: { angle: -45, distance: isMobile ? 130 : 240 },
-      cousin: { angle: 135, distance: isMobile ? 130 : 240 },
-      nephew: { angle: 45, distance: isMobile ? 130 : 240 },
-      niece: { angle: 45, distance: isMobile ? 140 : 260 },
+      spouse: { angle: 0, distance: isMobile ? 140 : 200 }, // Right
+      parent: { angle: -90, distance: isMobile ? 140 : 200 }, // Top
+      child: { angle: 90, distance: isMobile ? 140 : 200 }, // Bottom
+      sibling: { angle: 180, distance: isMobile ? 140 : 150 }, // Left
+      grandparent: { angle: -135, distance: isMobile ? 160 : 250 }, // Top-Left
+      grandchild: { angle: 135, distance: isMobile ? 160 : 250 }, // Bottom-Left
+      aunt: { angle: -45, distance: isMobile ? 150 : 220 }, // Top-Right (closer to parent arc)
+      uncle: { angle: -45, distance: isMobile ? 150 : 220 }, // Top-Right (closer to parent arc)
+      cousin: { angle: 45, distance: isMobile ? 150 : 220 }, // Bottom-Right (closer to child arc)
+      nephew: { angle: 45, distance: isMobile ? 150 : 220 }, // Bottom-Right (closer to child arc)
+      niece: { angle: 45, distance: isMobile ? 150 : 220 }, // Bottom-Right (closer to child arc)
     };
 
+    // Keep track of counts for each relationship type to help with spacing
     const relationshipCounts: Record<string, number> = {};
 
     data.forEach((relative) => {
-      // Skip the root node if it exists in data
-      if (relative.relationship === "self") return;
+      if (relative.relationship === "self") return; // Skip self
 
       const relationship = relative.relationship.toLowerCase();
       relationshipCounts[relationship] =
         (relationshipCounts[relationship] || 0) + 1;
-      const index = relationshipCounts[relationship] - 1;
+      const index = relationshipCounts[relationship] - 1; // 0-indexed count
 
-      const config = relationshipLayers[
-        relationship as keyof typeof relationshipLayers
-      ] || { angle: Math.random() * 360, distance: isMobile ? 100 : 200 };
+      const config =
+        relationshipLayers[relationship as keyof typeof relationshipLayers];
 
-      // Enhanced spacing for parents - more angle difference for two parents
-      let angleOffset;
-      if (relationship === "parent" && relationshipCounts[relationship] === 2) {
-        // For two parents, spread them wider apart
-        angleOffset = index * (isMobile ? 50 : 60) - (isMobile ? 25 : 30);
-      } else {
-        // Standard spacing for other relationships
-        angleOffset =
-          index * (isMobile ? 20 : 30) -
-          (relationshipCounts[relationship] - 1) * (isMobile ? 10 : 15);
+      if (!config) {
+        console.warn(`No layout config for relationship: ${relationship}`);
+        return;
       }
 
-      const finalAngle = (config.angle + angleOffset) * (Math.PI / 180);
+      let angleOffset = 0;
+      let arcSpread = isMobile ? 30 : 40; // Degrees to spread nodes within an arc
+
+      if (relationship === "parent" || relationship === "child") {
+        if (relationshipCounts[relationship] === 1) {
+          angleOffset = 0; // Center the first one
+        } else if (relationshipCounts[relationship] === 2) {
+          angleOffset = index === 0 ? -arcSpread / 2 : arcSpread / 2; // Spread two
+        } else {
+          // For more than two (e.g., step-parents, etc.), spread evenly
+          angleOffset =
+            (index - (relationshipCounts[relationship] - 1) / 2) *
+            (arcSpread / (relationshipCounts[relationship] - 1));
+        }
+      } else if (relationship === "sibling") {
+        arcSpread = isMobile ? 60 : 80;
+        angleOffset =
+          (index - (relationshipCounts[relationship] - 1) / 2) *
+          (arcSpread / Math.max(1, relationshipCounts[relationship] - 1));
+      } else if (
+        [
+          "aunt",
+          "uncle",
+          "cousin",
+          "nephew",
+          "niece",
+          "grandparent",
+          "grandchild",
+        ].includes(relationship)
+      ) {
+        arcSpread = isMobile ? 40 : 60;
+        angleOffset =
+          (index - (relationshipCounts[relationship] - 1) / 2) *
+          (arcSpread / Math.max(1, relationshipCounts[relationship] - 1));
+      }
+
+      const finalAngle = (config.angle + angleOffset) * (Math.PI / 180); // Convert to radians
 
       const x = centerX + Math.cos(finalAngle) * config.distance;
       const y = centerY + Math.sin(finalAngle) * config.distance;
 
-      // Ensure nodes stay within bounds
-      const nodeRadius = isMobile ? 20 : 30;
+      // Ensure nodes stay within bounds - considering node radius
+      const nodeRadius = isMobile ? 25 : 30; // Use the smaller node radius for clamping
       const clampedX = Math.max(
         nodeRadius,
         Math.min(svgDimensions.width - nodeRadius, x)
@@ -242,145 +252,6 @@ export default function FamilyTreeVisualization() {
     setSelectedNode(node);
   };
 
-  const handleMouseDown = (e: React.MouseEvent, nodeId: string) => {
-    if (e.button === 0) {
-      // Left click
-      const rect = svgRef.current?.getBoundingClientRect();
-      if (rect) {
-        const node = nodes.find((n) => n.id === nodeId);
-        if (node) {
-          setDraggedNode(nodeId);
-          setDragOffset({
-            x: e.clientX - rect.left - node.x,
-            y: e.clientY - rect.top - node.y,
-          });
-        }
-      }
-    }
-  };
-
-  const handleTouchStart = (e: React.TouchEvent, nodeId: string) => {
-    const touch = e.touches[0];
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (rect && touch) {
-      const node = nodes.find((n) => n.id === nodeId);
-      if (node) {
-        setDraggedNode(nodeId);
-        setDragOffset({
-          x: touch.clientX - rect.left - node.x,
-          y: touch.clientY - rect.top - node.y,
-        });
-      }
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (draggedNode) {
-      const rect = svgRef.current?.getBoundingClientRect();
-      if (rect) {
-        const nodeIndex = nodes.findIndex((n) => n.id === draggedNode);
-        if (nodeIndex !== -1) {
-          const newX = e.clientX - rect.left - dragOffset.x;
-          const newY = e.clientY - rect.top - dragOffset.y;
-
-          const nodeRadius = nodes[nodeIndex].isRoot ? 35 : 30;
-          nodes[nodeIndex].x = Math.max(
-            nodeRadius,
-            Math.min(svgDimensions.width - nodeRadius, newX)
-          );
-          nodes[nodeIndex].y = Math.max(
-            nodeRadius,
-            Math.min(svgDimensions.height - nodeRadius, newY)
-          );
-        }
-      }
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (draggedNode) {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const rect = svgRef.current?.getBoundingClientRect();
-      if (rect && touch) {
-        const nodeIndex = nodes.findIndex((n) => n.id === draggedNode);
-        if (nodeIndex !== -1) {
-          const newX = touch.clientX - rect.left - dragOffset.x;
-          const newY = touch.clientY - rect.top - dragOffset.y;
-
-          const nodeRadius = nodes[nodeIndex].isRoot ? 35 : 30;
-          nodes[nodeIndex].x = Math.max(
-            nodeRadius,
-            Math.min(svgDimensions.width - nodeRadius, newX)
-          );
-          nodes[nodeIndex].y = Math.max(
-            nodeRadius,
-            Math.min(svgDimensions.height - nodeRadius, newY)
-          );
-        }
-      }
-    }
-  };
-
-  const handleMouseUp = () => {
-    setDraggedNode(null);
-  };
-
-  const handleTouchEnd = () => {
-    setDraggedNode(null);
-  };
-
-  const addRelative = async () => {
-    if (!newRelative.relativeName || !newRelative.relationship) return;
-
-    try {
-      setSubmitting(true);
-      const response = await fetch("/api/tree", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: parseInt(userId),
-          relativeName: newRelative.relativeName,
-          relationship: newRelative.relationship,
-          profileUrl: newRelative.profileUrl || null,
-        }),
-      });
-
-      if (response.ok) {
-        setNewRelative({ relativeName: "", relationship: "", profileUrl: "" });
-        setShowAddForm(false);
-        fetchTreeData(); // Refresh the tree data
-      } else {
-        console.error("Failed to add relative");
-      }
-    } catch (error) {
-      console.error("Error adding relative:", error);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const deleteRelative = async (treeId: number) => {
-    if (!confirm("Are you sure you want to delete this relative?")) return;
-
-    try {
-      const response = await fetch(`/api/tree?treeId=${treeId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        fetchTreeData(); // Refresh the tree data
-        setSelectedNode(null); // Close the modal
-      } else {
-        console.error("Failed to delete relative");
-      }
-    } catch (error) {
-      console.error("Error deleting relative:", error);
-    }
-  };
-
   const handleBackToDashboard = () => {
     if (typeof window !== "undefined") {
       window.location.href = `/guest?user=${userId}`;
@@ -388,393 +259,275 @@ export default function FamilyTreeVisualization() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8">
-        {/* Enhanced Header */}
-        <div className="flex flex-row items-center justify-between mb-6 sm:mb-10 gap-2 flex-wrap">
-          {/* Left: Back Button */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 font-sans antialiased">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-8 sm:mb-12 gap-4">
           <button
             onClick={handleBackToDashboard}
-            className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold rounded-full shadow hover:from-blue-600 hover:to-blue-800 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm sm:text-base"
+            className="flex items-center space-x-2 px-4 py-2 bg-white text-gray-700 rounded-full shadow-md hover:bg-gray-100 transition-all duration-200 text-sm sm:text-base font-medium"
           >
-            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span>Back</span>
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Dashboard</span>
           </button>
 
-          {/* Center: Title & Subtitle */}
-          <div className="flex flex-col items-center flex-1 min-w-[180px]">
-            <h1 className="text-3xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-green-500 to-blue-700 text-center w-full tracking-tight drop-shadow-lg">
-              <span className="inline-block align-middle mr-2">
-                <User className="inline w-8 h-8 sm:w-10 sm:h-10 text-blue-500" />
-              </span>
-              Family Tree <span className="text-blue-600">Builder</span>
+          <div className="flex flex-col items-center text-center flex-1">
+            <h1 className="text-4xl sm:text-6xl font-extrabold text-gray-800 tracking-tight leading-tight">
+              Family Tree <span className="text-indigo-600">Viewer</span>
             </h1>
-            <span className="text-sm sm:text-base text-gray-500 mt-2 text-center block">
-              Visualize and manage your family connections
-            </span>
-            {/* <span className="text-sm sm:text-base text-gray-500 mt-1 text-center">
-              Visualize and manage your family connections
-            </span> */}
+            <p className="text-base sm:text-lg text-gray-500 mt-2">
+              Visualize your family connections
+            </p>
+          </div>
+
+          <div className="w-full sm:w-auto flex justify-center sm:justify-end">
+            {/* Empty div for spacing to keep title centered */}
           </div>
         </div>
 
-        <div className="flex justify-center mb-8">
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center space-x-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-green-400 via-blue-500 to-blue-700 text-white font-semibold rounded-full shadow-lg hover:from-green-500 hover:via-blue-600 hover:to-blue-800 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm sm:text-base"
-          >
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="tracking-wide">Add Relative</span>
-          </button>
-        </div>
+        {/* Main Content Area */}
+        <div className="bg-white rounded-xl shadow-2xl p-4 sm:p-8 relative">
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10 rounded-xl">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-4 border-indigo-500"></div>
+            </div>
+          )}
 
-        {/* Loading State */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
-        )}
+          {treeData.length === 0 && !loading && (
+            <div className="text-center p-6 bg-blue-50 border border-blue-200 rounded-lg mb-8">
+              <p className="text-blue-800 font-semibold text-lg">
+                This family tree is empty.
+              </p>
+              <p className="text-blue-600 text-md mt-2">
+                No relatives have been added yet.
+              </p>
+            </div>
+          )}
 
-        {/* Family Tree Visualization - Always shows root node */}
-        {!loading && (
           <div
-            className="bg-white rounded-lg shadow-lg p-2 sm:p-6 h-[600px] overflow-y-auto"
+            className="relative flex justify-center w-full"
             ref={containerRef}
+            style={{ minHeight: isMobile ? "500px" : "600px" }} // Ensure container has a minimum height
           >
-            {treeData.length === 0 && (
-              <div className="text-center mb-4 sm:mb-6 p-3 sm:p-4 bg-blue-50 rounded-lg">
-                <p className="text-blue-800 font-medium text-sm sm:text-base">
-                  Start building your family tree by adding relatives!
-                </p>
-                <p className="text-blue-600 text-xs sm:text-sm mt-1">
-                  Click "Add" to connect family members to your tree.
-                </p>
-              </div>
-            )}
+            <svg
+              ref={svgRef}
+              width={svgDimensions.width}
+              height={svgDimensions.height}
+              className="rounded-lg touch-none bg-white"
+            >
+              {/* Edges */}
+              {edges.map((edge, index) => {
+                const fromNode = nodes.find((n) => n.id === edge.from);
+                const toNode = nodes.find((n) => n.id === edge.to);
+                if (!fromNode || !toNode) return null;
 
-            <div className="relative flex justify-center">
-              <svg
-                ref={svgRef}
-                width={svgDimensions.width}
-                height={svgDimensions.height}
-                className="rounded-lg touch-none"
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                style={{ maxWidth: "100%" }}
-              >
-                {/* Edges */}
-                {edges.map((edge, index) => {
-                  const fromNode = nodes.find((n) => n.id === edge.from);
-                  const toNode = nodes.find((n) => n.id === edge.to);
-                  if (!fromNode || !toNode) return null;
+                const midX = (fromNode.x + toNode.x) / 2;
+                const midY = (fromNode.y + toNode.y) / 2;
+                const labelWidth = isMobile ? 60 : 80;
+                const labelHeight = isMobile ? 18 : 24;
 
-                  const midX = (fromNode.x + toNode.x) / 2;
-                  const midY = (fromNode.y + toNode.y) / 2;
-                  const labelWidth = isMobile ? 50 : 60;
-                  const labelHeight = isMobile ? 16 : 20;
-
-                  return (
-                    <g key={index}>
-                      <line
-                        x1={fromNode.x}
-                        y1={fromNode.y}
-                        x2={toNode.x}
-                        y2={toNode.y}
-                        stroke="#94A3B8"
-                        strokeWidth="2"
-                        className="transition-colors"
-                      />
-                      <rect
-                        x={midX - labelWidth / 2}
-                        y={midY - labelHeight / 2}
-                        width={labelWidth}
-                        height={labelHeight}
-                        fill="white"
-                        stroke="#E2E8F0"
-                        rx="4"
-                      />
-                      <text
-                        x={midX}
-                        y={midY + (isMobile ? 2 : 4)}
-                        textAnchor="middle"
-                        className={`${
-                          isMobile ? "text-xs" : "text-xs"
-                        } fill-gray-600 font-medium`}
-                      >
-                        {edge.relationship}
-                      </text>
-                    </g>
-                  );
-                })}
-
-                {/* Nodes */}
-                {nodes.map((node) => {
-                  const nodeRadius = node.isRoot
-                    ? isMobile
-                      ? 30
-                      : 35
-                    : isMobile
-                    ? 25
-                    : 30;
-                  const iconSize = node.isRoot
-                    ? isMobile
-                      ? 18
-                      : 24
-                    : isMobile
-                    ? 15
-                    : 20;
-                  const isHovered = hoveredNode === node.id;
-
-                  return (
-                    <g
-                      key={node.id}
-                      className={
-                        node.isRoot && !node.data
-                          ? "cursor-default"
-                          : "cursor-pointer"
-                      }
+                return (
+                  <g key={index}>
+                    <line
+                      x1={fromNode.x}
+                      y1={fromNode.y}
+                      x2={toNode.x}
+                      y2={toNode.y}
+                      stroke="#A3A3A3" // Gray
+                      strokeWidth="2"
+                      className="transition-colors duration-200"
+                    />
+                    <rect
+                      x={midX - labelWidth / 2}
+                      y={midY - labelHeight / 2}
+                      width={labelWidth}
+                      height={labelHeight}
+                      fill="#F8FAFC" // Light gray for label background
+                      stroke="#CBD5E1" // Border for label
+                      rx="6"
+                      ry="6"
+                      className="shadow-sm"
+                    />
+                    <text
+                      x={midX}
+                      y={midY + (isMobile ? 3 : 5)}
+                      textAnchor="middle"
+                      className={`${
+                        isMobile ? "text-[10px]" : "text-xs"
+                      } fill-gray-700 font-semibold uppercase tracking-wider`}
                     >
-                      <circle
-                        cx={node.x}
-                        cy={node.y}
-                        r={nodeRadius}
-                        fill={node.isRoot ? "#3B82F6" : "#10B981"}
-                        stroke="white"
-                        strokeWidth="3"
-                        className={`transition-all duration-200 ${
-                          isHovered ? "shadow-lg filter drop-shadow-lg" : ""
-                        }`}
-                        style={{
-                          transform: isHovered ? "scale(1.1)" : "scale(1)",
-                          transformOrigin: `${node.x}px ${node.y}px`,
-                          filter: isHovered
-                            ? "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))"
-                            : "none",
-                        }}
-                        onClick={() => handleNodeClick(node)}
-                        onMouseDown={(e) => handleMouseDown(e, node.id)}
-                        onTouchStart={(e) => handleTouchStart(e, node.id)}
-                        onMouseEnter={() => setHoveredNode(node.id)}
-                        onMouseLeave={() => setHoveredNode(null)}
-                      />
+                      {edge.relationship}
+                    </text>
+                  </g>
+                );
+              })}
 
-                      {/* User icon - no profile images */}
-                      <User
-                        x={node.x - iconSize / 2}
-                        y={node.y - iconSize / 2}
-                        width={iconSize}
-                        height={iconSize}
-                        className={`fill-white pointer-events-none transition-all duration-200 ${
-                          isHovered ? "opacity-90" : "opacity-100"
-                        }`}
-                        style={{
-                          transform: isHovered ? "scale(1.1)" : "scale(1)",
-                          transformOrigin: `${node.x}px ${node.y}px`,
-                        }}
-                      />
+              {/* Nodes */}
+              {nodes.map((node) => {
+                const nodeRadius = node.isRoot
+                  ? isMobile
+                    ? 35
+                    : 45
+                  : isMobile
+                  ? 30
+                  : 40;
+                const iconSize = node.isRoot
+                  ? isMobile
+                    ? 22
+                    : 30
+                  : isMobile
+                  ? 18
+                  : 24;
+                const isHovered = hoveredNode === node.id;
+                const nameTextLength = isMobile ? 9 : 12; // Max characters before truncation
 
-                      {/* Name label */}
+                return (
+                  <g
+                    key={node.id}
+                    className={
+                      node.isRoot && !node.data
+                        ? "cursor-default"
+                        : "cursor-pointer"
+                    }
+                  >
+                    <circle
+                      cx={node.x}
+                      cy={node.y}
+                      r={nodeRadius}
+                      fill={node.isRoot ? "#4F46E5" : "#10B981"} // Indigo for root, Green for others
+                      stroke="#FFFFFF"
+                      strokeWidth="4"
+                      className={`transition-all duration-300 ease-in-out ${
+                        isHovered
+                          ? "ring-4 ring-indigo-400 shadow-2xl"
+                          : "ring-0 shadow-md"
+                      }`}
+                      style={{
+                        filter: isHovered
+                          ? "drop-shadow(0 6px 12px rgba(0, 0, 0, 0.25))"
+                          : "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))",
+                      }}
+                      onClick={() => handleNodeClick(node)}
+                      onMouseEnter={() => setHoveredNode(node.id)}
+                      onMouseLeave={() => setHoveredNode(null)}
+                    />
+
+                    {/* User icon */}
+                    <User
+                      x={node.x - iconSize / 2}
+                      y={node.y - iconSize / 2}
+                      width={iconSize}
+                      height={iconSize}
+                      className="fill-white pointer-events-none"
+                    />
+
+                    {/* Name label */}
+                    <text
+                      x={node.x}
+                      y={node.y + nodeRadius + (isMobile ? 16 : 20)}
+                      textAnchor="middle"
+                      className={`${
+                        isMobile ? "text-xs" : "text-sm"
+                      } font-bold fill-gray-800 pointer-events-none`}
+                    >
+                      {node.name.length > nameTextLength
+                        ? node.name.substring(0, nameTextLength) + "..."
+                        : node.name}
+                    </text>
+
+                    {node.isRoot && (
                       <text
                         x={node.x}
-                        y={node.y + nodeRadius + (isMobile ? 12 : 15)}
+                        y={node.y + nodeRadius + (isMobile ? 28 : 38)}
                         textAnchor="middle"
                         className={`${
-                          isMobile ? "text-xs" : "text-sm"
-                        } font-medium fill-gray-700 pointer-events-none transition-all duration-200 ${
-                          isHovered ? "font-bold" : ""
-                        }`}
-                        style={{
-                          transform: isHovered ? "scale(1.05)" : "scale(1)",
-                          transformOrigin: `${node.x}px ${
-                            node.y + nodeRadius + (isMobile ? 12 : 15)
-                          }px`,
-                        }}
+                          isMobile ? "text-[10px]" : "text-xs"
+                        } fill-indigo-700 font-medium pointer-events-none uppercase`}
                       >
-                        {isMobile && node.name.length > 8
-                          ? node.name.substring(0, 8) + "..."
-                          : node.name}
+                        (You)
                       </text>
-
-                      {node.isRoot && (
-                        <text
-                          x={node.x}
-                          y={node.y + nodeRadius + (isMobile ? 24 : 30)}
-                          textAnchor="middle"
-                          className={`${
-                            isMobile ? "text-xs" : "text-xs"
-                          } fill-blue-600 font-medium pointer-events-none transition-all duration-200 ${
-                            isHovered ? "font-bold" : ""
-                          }`}
-                          style={{
-                            transform: isHovered ? "scale(1.05)" : "scale(1)",
-                            transformOrigin: `${node.x}px ${
-                              node.y + nodeRadius + (isMobile ? 24 : 30)
-                            }px`,
-                          }}
-                        >
-                          (You)
-                        </text>
-                      )}
-                    </g>
-                  );
-                })}
-              </svg>
-            </div>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
           </div>
-        )}
+        </div>
 
         {/* Node Details Modal */}
         {selectedNode && selectedNode.data && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md">
-              <div className="flex items-start justify-between mb-4">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-md transform scale-95 animate-scale-in">
+              <div className="flex items-center justify-between mb-5 border-b pb-4">
+                <h2 className="text-2xl font-bold text-gray-900">
                   {selectedNode.name}
                 </h2>
                 <button
                   onClick={() => setSelectedNode(null)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
                     Relationship
                   </label>
-                  <p className="text-gray-900 capitalize">
+                  <p className="text-gray-900 text-lg capitalize font-semibold">
                     {selectedNode.data.relationship}
                   </p>
                 </div>
 
                 {selectedNode.data.profile_url && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-medium text-gray-600 mb-1">
                       Profile Link
                     </label>
                     <a
                       href={selectedNode.data.profile_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 text-sm break-all underline"
+                      className="text-blue-600 hover:text-blue-800 text-base break-all underline transition-colors"
                     >
                       {selectedNode.data.profile_url}
                     </a>
                   </div>
                 )}
-
-                <div className="pt-4 border-t">
-                  <button
-                    onClick={() => deleteRelative(selectedNode.data!.tree_id)}
-                    className="flex items-center space-x-2 text-red-600 hover:text-red-800 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Delete Relative</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Add Relative Modal */}
-        {showAddForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
-                Add New Relative
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={newRelative.relativeName}
-                    onChange={(e) =>
-                      setNewRelative({
-                        ...newRelative,
-                        relativeName: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Relationship *
-                  </label>
-                  <select
-                    value={newRelative.relationship}
-                    onChange={(e) =>
-                      setNewRelative({
-                        ...newRelative,
-                        relationship: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                    required
-                  >
-                    <option value="">Select relationship</option>
-                    <option value="parent">Parent</option>
-                    <option value="child">Child</option>
-                    <option value="sibling">Sibling</option>
-                    <option value="spouse">Spouse</option>
-                    <option value="grandparent">Grandparent</option>
-                    <option value="grandchild">Grandchild</option>
-                    <option value="aunt">Aunt</option>
-                    <option value="uncle">Uncle</option>
-                    <option value="cousin">Cousin</option>
-                    <option value="nephew">Nephew</option>
-                    <option value="niece">Niece</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Profile Link (optional)
-                  </label>
-                  <input
-                    type="url"
-                    value={newRelative.profileUrl}
-                    onChange={(e) =>
-                      setNewRelative({
-                        ...newRelative,
-                        profileUrl: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                    placeholder="https://example.com/"
-                  />
-                </div>
-                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddForm(false)}
-                    className="w-full sm:flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={addRelative}
-                    disabled={submitting}
-                    className="w-full sm:flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    {submitting ? "Adding..." : "Add Relative"}
-                  </button>
-                </div>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Tailwind CSS for animations */}
+      <style jsx>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        @keyframes scale-in {
+          from {
+            transform: scale(0.95);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out forwards;
+        }
+        .animate-scale-in {
+          animation: scale-in 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+      `}</style>
     </div>
   );
 }
