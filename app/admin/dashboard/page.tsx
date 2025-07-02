@@ -524,25 +524,28 @@ export default function AdminDashboard() {
               ? getUserIconUrl(user.id, user.has_icon)
               : "/placeholder-icon.jpg"
           }
-          alt="User Icon"
-          className="w-24 h-24 rounded-full mx-auto border-4 border-white shadow-md object-cover transition-transform duration-300 hover:scale-105 hover:shadow-xl"
+          alt={user?.name ? `${user.name}'s User Icon` : "User Icon"}
+          className="w-32 h-32 rounded-full mx-auto border-4 border-blue-200 shadow-md object-cover transition-transform duration-300 hover:scale-105 hover:shadow-xl ring-2 ring-blue-100 ring-offset-2"
         />
 
-        <h1 className="text-2xl font-bold mt-2">{user?.name}</h1>
-        <p className="text-gray-500">
-          {user?.birthday} – {user?.dateOfDeath ? user.dateOfDeath : "Present"}
+        <h1 className="text-3xl font-extrabold mt-5 text-gray-800 tracking-tight">
+          {user?.name}
+        </h1>
+        <p className="text-gray-600 text-lg mt-1 font-medium">
+          {user?.birthday} &mdash;{" "}
+          {user?.dateOfDeath ? user.dateOfDeath : "Present"}
         </p>
-        <p className="italic text-sm mt-2">
-          {user?.gender} | {user?.address}
+        <p className="italic text-sm text-gray-500 mt-2">
+          {user?.gender} &bull; {user?.address}
         </p>
 
         {/* Action Buttons */}
         <div className="flex justify-center gap-4 mt-4">
-          <button className="border px-4 py-2 rounded-full text-sm text-yellow-600 border-yellow-500 hover:bg-yellow-100">
+          <button className="border px-4 py-2 rounded-full text-sm text-yellow-700 border-yellow-500 hover:bg-yellow-200 hover:border-yellow-600 shadow-md transition-all duration-200 ease-in-out transform hover:scale-105">
             ♡ Favorite
           </button>
           <button
-            className="border px-4 py-2 rounded-full text-sm text-yellow-600 border-yellow-500 hover:bg-yellow-100"
+            className="border px-4 py-2 rounded-full text-sm text-yellow-700 border-yellow-500 hover:bg-yellow-200 hover:border-yellow-600 shadow-md transition-all duration-200 ease-in-out transform hover:scale-105"
             onClick={() => {
               if (user?.id) {
                 const url = `https://itombs.vercel.app/guest?user=${user.id}`;
@@ -555,7 +558,7 @@ export default function AdminDashboard() {
             🔄 Share
           </button>
           <button
-            className="border px-4 py-2 rounded-full text-sm text-yellow-600 border-yellow-500 hover:bg-yellow-100"
+            className="border px-4 py-2 rounded-full text-sm text-yellow-700 border-yellow-500 hover:bg-yellow-200 hover:border-yellow-600 shadow-md transition-all duration-200 ease-in-out transform hover:scale-105"
             onClick={() =>
               router.push("/admin/settings" + (userId ? `?user=${userId}` : ""))
             }
@@ -762,7 +765,7 @@ export default function AdminDashboard() {
                   <img
                     src={getImageUrl(post.id, post.has_image || false)}
                     alt={post.title}
-                    className="rounded-md h-60 w-full object-cover hover:opacity-90 transition-opacity duration-200"
+                    className="mt-3 rounded-md h-70 w-full object-cover hover:opacity-70 transition-opacity duration-200"
                     onClick={() => handlePostClick(post)}
                   />
                 </div>
