@@ -597,9 +597,10 @@ export default function AdminDashboard() {
         <div className="max-w-2xl mx-auto mt-4">
           <button
             onClick={() => setIsAddPostModalOpen(true)}
-            className="w-full bg-yellow-500 text-white py-3 px-4 rounded-lg hover:bg-yellow-600 transition-colors font-semibold shadow-md"
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-white py-3 px-4 rounded-xl hover:from-yellow-500 hover:to-yellow-700 transition-all font-semibold shadow-lg text-lg tracking-wide border-2 border-yellow-400 hover:border-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
           >
-            + Add New Post
+            <span className="text-2xl">✚</span>
+            <span>Add New Post</span>
           </button>
         </div>
       )}
@@ -1271,8 +1272,22 @@ export default function AdminDashboard() {
       <div className="flex justify-center mt-10">
         <button
           onClick={handleLogout}
-          className="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600"
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 via-pink-500 to-yellow-500 text-white rounded-full shadow-lg hover:from-red-600 hover:to-yellow-600 transition-all font-semibold text-lg border-2 border-red-400 hover:border-yellow-500 focus:outline-none focus:ring-2 focus:ring-red-400"
         >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 012 2v1"
+            />
+          </svg>
           Logout
         </button>
       </div>
