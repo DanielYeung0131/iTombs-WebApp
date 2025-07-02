@@ -459,7 +459,7 @@ export default function AdminDashboard() {
   const tabs = ["Timeline", "Bio", "Media", "Family Tree"];
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-blue-50 p-4">
       {/* Profile Header */}
       <div
         className="max-w-2xl mx-auto p-6 rounded-xl shadow-lg text-center relative overflow-hidden"
@@ -698,9 +698,20 @@ export default function AdminDashboard() {
 
       {/* Content for other tabs */}
       {activeTab === 1 && (
-        <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Bio</h2>
-          <p className="text-gray-600">{user?.intro}</p>
+        <div className="max-w-2xl mx-auto mt-6 bg-white p-8 rounded-xl shadow flex flex-col items-center">
+          <h2 className="text-2xl font-bold mb-2 text-yellow-600">Bio</h2>
+          <div className="w-20 h-1 bg-yellow-300 rounded-full mb-6"></div>
+          <div className="w-full text-center">
+            <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-line">
+              {user?.intro ? (
+                user.intro
+              ) : (
+                <span className="italic text-gray-400">
+                  No biography provided yet.
+                </span>
+              )}
+            </p>
+          </div>
         </div>
       )}
 
@@ -708,8 +719,12 @@ export default function AdminDashboard() {
         <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-xl font-semibold mb-1">Media</h2>
-              <p className="text-gray-600">Click to view details.</p>
+              <h2 className="text-2xl font-bold mb-1 text-pink-600 tracking-tight">
+                Media Gallery
+              </h2>
+              <p className="text-gray-500 text-sm mb-2 italic">
+                Click any image to view details.
+              </p>
             </div>
             <a
               href={
@@ -761,7 +776,19 @@ export default function AdminDashboard() {
 
       {activeTab === 3 && (
         <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Family Tree</h2>
+          <div className="flex flex-col items-center mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-3xl">🌳</span>
+              <h2 className="text-2xl font-bold text-emerald-700 tracking-tight">
+                Family Tree
+              </h2>
+            </div>
+            <div className="w-24 h-1 bg-gradient-to-r from-emerald-300 via-teal-300 to-cyan-300 rounded-full mb-2"></div>
+            <p className="text-gray-600 text-center max-w-md">
+              Explore the family lineage and connections. Click below to view or
+              edit the full family tree.
+            </p>
+          </div>
           <div className="flex justify-center">
             <a
               href={user ? `/admin/tree?userid=${user.id}` : "#"}
