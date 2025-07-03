@@ -303,9 +303,14 @@ export default function GuestView() {
 
         {/* Action Buttons - "Settings" button removed */}
         <div className="flex justify-center gap-4 mt-4">
-          <button className="border px-4 py-2 rounded-full text-sm text-yellow-700 border-yellow-500 hover:bg-yellow-200 hover:border-yellow-600 shadow-md transition-all duration-200 ease-in-out transform hover:scale-105">
-            ♡ Favorite
-          </button>
+          <a
+            className="border px-4 py-2 rounded-full text-sm text-yellow-700 border-yellow-500 hover:bg-yellow-200 hover:border-yellow-600 shadow-md transition-all duration-200 ease-in-out transform hover:scale-105 flex items-center justify-center"
+            href="/admin/near-me"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            👥 Other Profiles
+          </a>
           <button
             className="border px-4 py-2 rounded-full text-sm text-yellow-700 border-yellow-500 hover:bg-yellow-200 hover:border-yellow-600 shadow-md transition-all duration-200 ease-in-out transform hover:scale-105"
             onClick={() => {

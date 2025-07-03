@@ -468,7 +468,7 @@ export default function AdminSettings() {
                 htmlFor="address"
                 className="block text-sm font-semibold text-gray-700 mb-2"
               >
-                Address
+                Full Address
               </label>
               <textarea
                 id="address"
