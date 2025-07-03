@@ -543,7 +543,7 @@ export default function AdminDashboard() {
         <div className="flex justify-center gap-4 mt-4">
           <a
             className="border px-4 py-2 rounded-full text-sm text-yellow-700 border-yellow-500 hover:bg-yellow-200 hover:border-yellow-600 shadow-md transition-all duration-200 ease-in-out transform hover:scale-105 flex items-center justify-center"
-            href="/admin/near-me"
+            href="/near-me"
             target="_blank"
             rel="noopener noreferrer"
           >
