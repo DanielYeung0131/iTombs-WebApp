@@ -447,9 +447,7 @@ export default function NearMePage() {
 
                 <button
                   className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-2xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-                  onClick={() =>
-                    router.push(`/admin/dashboard?user=${user.id}`)
-                  }
+                  onClick={() => router.push(`/guest?user=${user.id}`)}
                 >
                   Visit Full Profile
                 </button>
